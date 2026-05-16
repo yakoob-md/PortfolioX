@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Dict
 import json
+import io
+import pandas as pd
 from datetime import datetime
 
 from db.database import get_db
@@ -18,7 +20,49 @@ from models.schemas import (
     Holding
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
+
+@router.post("/import")
+async def import_custom_portfolio(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Import custom fund holdings from a CSV file.
+    Format: stock_name, holding_percentage, sector, market_cap, stock_isin
+    """
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed.")
+        
+    try:
+        content = await file.read()
+        df = pd.read_csv(io.BytesIO(content))
+        
+        # Validate required columns
+        required = ['stock_name', 'holding_percentage']
+        if not all(col in df.columns for col in required):
+            raise HTTPException(status_code=400, detail=f"CSV must contain at least: {required}")
+            
+        # Convert to list of Holding objects for analysis
+        # For simplicity, we'll return this data to the frontend which will then 
+        # include it in the /analyze call as a 'virtual' fund.
+        holdings = []
+        for _, row in df.iterrows():
+            holdings.append({
+                "stock_name": str(row['stock_name']),
+                "holding_percentage": float(row['holding_percentage']),
+                "sector": str(row.get('sector', 'Other')),
+                "market_cap": str(row.get('market_cap', 'Other')),
+                "stock_isin": str(row.get('stock_isin', ''))
+            })
+            
+        return {"filename": file.filename, "holdings": holdings}
+        
+    except Exception as e:
+        logger.error(f"CSV import error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to parse CSV file.")
 
 overlap_engine = OverlapEngine()
 health_scorer = HealthScorer()
@@ -30,46 +74,52 @@ async def analyze_portfolio(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Analyzes a portfolio of mutual funds.
-    Computes overlap, sector exposure, costs, and health score.
+    Main analysis endpoint: takes a list of funds/units (and optional custom holdings)
+    and computes overlap, sector exposure, and health scores.
     """
     fund_repo = FundRepository(db)
     
-    # 1. Resolve and Fetch Fund Details
-    scheme_codes = [f["scheme_code"] for f in request.funds]
-    funds_db = await fund_repo.get_funds_by_codes(scheme_codes)
-    
-    if len(funds_db) != len(scheme_codes):
-        found_codes = {f.scheme_code for f in funds_db}
-        missing = [c for c in scheme_codes if c not in found_codes]
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Some funds not found: {missing}"
-        )
-    
-    # Map input units to DB funds
-    input_map = {f["scheme_code"]: f["units"] for f in request.funds}
-    
-    portfolio_funds = []
+    # 1. Fetch data for all funds (DB or Custom)
+    fund_holdings = {} # code -> List[Holding]
+    fund_details = {}  # code -> {name, nav, expense_ratio, plan_type}
+    weights = {}       # code -> total_value_in_fund
     total_value = 0.0
-    fund_names = {}
     
-    for f in funds_db:
-        units = input_map[f.scheme_code]
-        nav = float(f.nav) if f.nav else 0.0
-        current_value = units * nav
-        total_value += current_value
-        fund_names[f.scheme_code] = f.scheme_name
+    for f_req in request.funds:
+        code = f_req.get("scheme_code")
+        units = f_req.get("units", 0)
         
-        portfolio_funds.append(PortfolioFund(
-            scheme_code=f.scheme_code,
-            scheme_name=f.scheme_name,
-            units=units,
-            nav=nav,
-            current_value=current_value,
-            expense_ratio=float(f.expense_ratio) if f.expense_ratio else None,
-            plan_type=f.plan_type or "Regular"
-        ))
+        # A. Custom Holdings Path
+        if "custom_holdings" in f_req and f_req["custom_holdings"]:
+            holdings = [Holding(**h) for h in f_req["custom_holdings"]]
+            fund_holdings[code] = holdings
+            fund_details[code] = {
+                "name": f_req.get("scheme_name", f"Imported Fund ({code})"),
+                "nav": 10.0,
+                "expense_ratio": 0.0,
+                "plan_type": "Direct"
+            }
+        # B. Database Path
+        else:
+            fund = await fund_repo.get_fund_by_code(code)
+            if not fund:
+                continue
+            
+            holdings_db = await fund_repo.get_fund_holdings([code])
+            # Filter for equity and convert to model
+            fund_holdings[code] = [Holding.model_validate(h) for h in holdings_db]
+            
+            fund_details[code] = {
+                "name": fund.scheme_name,
+                "nav": float(fund.nav) if fund.nav else 10.0,
+                "expense_ratio": float(fund.expense_ratio) if fund.expense_ratio else 0.0,
+                "plan_type": fund.plan_type or "Direct"
+            }
+            
+        # Calc weighting
+        val = fund_details[code]["nav"] * units
+        total_value += val
+        weights[code] = val
 
     if total_value == 0:
         raise HTTPException(
@@ -77,59 +127,67 @@ async def analyze_portfolio(
             detail="Total portfolio value is zero. Check units and NAV."
         )
 
-    # 2. Fetch Holdings
-    holdings_db = await fund_repo.get_fund_holdings(scheme_codes)
-    fund_holdings = {code: [] for code in scheme_codes}
-    for h in holdings_db:
-        fund_holdings[h.scheme_code].append(Holding.model_validate(h))
+    # 2. Convert to normalized weights (0-1) for engines
+    norm_weights = {code: val/total_value for code, val in weights.items()}
+    fund_names = {code: detail["name"] for code, detail in fund_details.items()}
 
     # 3. Compute Analytics
-    weights = {f.scheme_code: f.current_value / total_value for f in portfolio_funds}
-    
     overlap_matrix = overlap_engine.compute_overlap(fund_holdings, fund_names)
-    sector_exposure = overlap_engine.compute_sector_exposure(fund_holdings, weights)
-    marketcap_breakdown = overlap_engine.compute_marketcap_breakdown(fund_holdings, weights)
-    top_stocks = overlap_engine.compute_stock_concentration(fund_holdings, weights)[:15]
+    sector_exposure = overlap_engine.compute_sector_exposure(fund_holdings, norm_weights)
+    marketcap_breakdown = overlap_engine.compute_marketcap_breakdown(fund_holdings, norm_weights)
+    stock_concentrations = overlap_engine.compute_stock_concentration(fund_holdings, norm_weights)
 
     # 4. Expense Audit
-    weighted_expense = sum([
-        (f.expense_ratio or 1.5) * weights[f.scheme_code] for f in portfolio_funds
-    ])
-    regular_plan_funds = [f.scheme_name for f in portfolio_funds if f.plan_type == "Regular"]
-    # Estimate potential savings (0.7% avg difference)
-    potential_savings = total_value * (len(regular_plan_funds) / len(portfolio_funds)) * 0.007 if portfolio_funds else 0
+    reg_funds = [fund_details[code]["name"] for code, detail in fund_details.items() if detail["plan_type"] == "Regular"]
+    total_weighted_expense = sum(fund_details[code]["expense_ratio"] * norm_weights[code] for code in weights)
+    potential_savings = (total_weighted_expense - 0.5) * total_value / 100 if total_weighted_expense > 0.5 else 0
     
     expense_audit = ExpenseAudit(
-        total_weighted_expense_ratio=round(weighted_expense, 2),
-        regular_plan_funds=regular_plan_funds,
-        potential_savings_yearly=round(potential_savings, 2),
-        benchmark_expense_ratio=0.8
+        total_weighted_expense_ratio=round(total_weighted_expense, 2),
+        regular_plan_funds=reg_funds,
+        potential_savings_yearly=round(max(0, potential_savings), 2),
+        benchmark_expense_ratio=0.75
     )
 
-    # 5. Health Score
-    health_score, red_flags = health_scorer.calculate(
+    # 5. Health Scoring
+    health_score, red_flags = health_scorer.score_portfolio(
         overlap_matrix, 
-        expense_audit, 
-        top_stocks, 
-        sector_exposure,
-        [{"name": f.scheme_name, "plan_type": f.plan_type} for f in portfolio_funds]
+        sector_exposure, 
+        expense_audit
     )
 
-    # 6. Result Assembly
+    # 6. AI Insights (Only if cache miss or first time)
+    health_explanation = await llm_explainer.explain_health(
+        health_score, 
+        red_flags, 
+        sector_exposure
+    )
+
+    # 7. Final Response Object
+    portfolio_funds = []
+    for code, detail in fund_details.items():
+        portfolio_funds.append(PortfolioFund(
+            scheme_code=code,
+            scheme_name=detail["name"],
+            units=weights[code] / detail["nav"],
+            nav=detail["nav"],
+            current_value=weights[code],
+            expense_ratio=detail["expense_ratio"],
+            plan_type=detail["plan_type"]
+        ))
+
     result = AnalysisResult(
         funds=portfolio_funds,
         total_value=round(total_value, 2),
         overlap_matrix=overlap_matrix,
         sector_exposure=sector_exposure,
         marketcap_breakdown=marketcap_breakdown,
-        top_stock_concentrations=top_stocks,
+        top_stock_concentrations=stock_concentrations[:10],
         expense_audit=expense_audit,
         health_score=health_score,
+        health_explanation=health_explanation,
         red_flags=red_flags
     )
-
-    # 7. LLM Explanation (Optional/Async-ish)
-    result.health_explanation = await llm_explainer.generate_portfolio_summary(result)
 
     # 8. Persistence
     session_id = await fund_repo.create_analysis_session(

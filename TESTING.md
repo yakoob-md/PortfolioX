@@ -6,7 +6,7 @@ This guide explains how to run and test the two main modules of PortfolioX: the 
 
 ## 1. Prerequisites
 Ensure your environment is set up and your database is reachable.
-- **Backend Environment**: `conda activate C:\Users\dabaa\OneDrive\Desktop\dektop_content\PortfolioX\portfolio_venv`
+- **Backend Environment**: `conda activate ./portfolio_venv`
 - **Frontend Environment**: Node.js installed in `frontend/`
 
 ---
@@ -16,7 +16,7 @@ Ensure your environment is set up and your database is reachable.
 ### Start the Backend
 ```powershell
 cd backend
-conda activate C:\Users\dabaa\OneDrive\Desktop\dektop_content\PortfolioX\portfolio_venv
+conda activate ./portfolio_venv
 python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -47,7 +47,7 @@ The application will be available at `http://localhost:3000`.
 2. You have two ways to test this:
 
 ### Option A: Automatic Parsing (PDF Upload)
-1. Use the mock PDF I generated for you: `C:\Users\dabaa\OneDrive\Desktop\dektop_content\PortfolioX\mock_cams_statement.pdf`.
+1. Use the mock PDF provided in the project root: `mock_cams_statement.pdf`.
 2. Drag and drop this file into the upload zone.
 3. Click **"Calculate Tax Liability"**.
 4. **Verify**: It should show ₹0 tax (as the gains are within the ₹1.25L exemption) and suggest a tax-saving optimization strategy.

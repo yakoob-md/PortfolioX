@@ -1,23 +1,31 @@
-ARCHITECTURAL PROBLEMS 🟠
-Problem 1: No Alembic Migrations
-alembic==1.13.1 is in requirements.txt but never initialized. You're using Base.metadata.create_all() in migrate.py which is fine for initial setup but doesn't support schema evolution. When you add a column (e.g., the market_cap column), you're doing it with raw ALTER TABLE SQL in reseed.py. This is how databases get out of sync between environments.
-The reseed.py at project root is a red flag for any senior engineer reviewing this. It mixes schema migration logic with data seeding logic in an ad-hoc script. Delete it.
-Problem 2: Manual Migration Script
-migrate.py at the project root runs raw ALTER TABLE SQL. This:
+WHAT WILL BREAK AT SCALE 🔴
+The holdings data problem is the biggest risk. Your entire value proposition — overlap detection, sector exposure, health scoring — depends on holdings data. Right now you have:
 
-Has no version tracking
-Can't be rolled back
-Can't be applied selectively
-Breaks in production if run twice (some statements aren't idempotent)
+10 funds seeded
+3–9 holdings per fund (real funds have 50–100 stocks)
+Hardcoded codes that may or may not match real AMFI codes
+No date filtering (will double-count when monthly updates arrive)
+No scheduled job to fetch AMFI's monthly portfolio disclosures
 
-You have Alembic. Use it.
-Problem 3: Inconsistent Router Registration
-In main.py:
-pythonapp.include_router(funds.router, prefix="/api")      # funds.py: prefix="/funds" → /api/funds
-app.include_router(portfolio.router, prefix="/api")   # portfolio.py: prefix="/portfolio" → /api/portfolio
-app.include_router(tax.router)                        # tax.py: prefix="/api/tax" → /api/tax
-The tax router embeds its own /api prefix while the others get it injected from main.py. This works but is inconsistent. Someone adding a new router will follow the wrong pattern.
-Problem 4: Hardcoded CORS Origins
-Production frontend URL is "https://portfoliox.vercel.app" which is a placeholder. When you actually deploy to Vercel the URL will be different and CORS will block everything.
-Problem 5: reseed.py Exposes Data Model Assumptions
-The root-level reseed.py uses raw SQL with hardcoded scheme codes that are assumed/guessed (the comments say "Assumed code"). If those codes are wrong in the database (which is likely since AMFI codes change), the holdings data is attached to the wrong funds. The find_codes.py script exists precisely because the seeder is using guessed codes — this is a data integrity problem.
+This means: when a user adds "Mirae Asset Large Cap" and "Parag Parikh Flexi Cap" expecting to see overlap, if either fund's scheme code isn't in your seeded list, they see zero overlap. Not "partial overlap" — zero. This is a silent correctness failure.
+
+WHAT FEELS TUTORIAL-GRADE vs PRODUCTION-GRADE
+Still tutorial-grade:
+
+No unit tests (the test files need a running server — they're integration tests, not unit tests)
+No Alembic migrations
+reseed.py and migrate.py at project root
+TESTING.md has hardcoded Windows absolute paths (C:\Users\dabaa\...)
+Holdings data is sparse, guessed codes
+No background job to sync AMFI data
+
+Already production-grade:
+
+Async throughout — properly done
+Repository pattern — clean
+Pydantic v2 schemas — correct
+Redis caching with fail-open — correct pattern
+Rate limiting implementation — real implementation
+UI design system — genuinely premium
+FIFO tax engine — correct business logic
+LLM prompt constraints — well thought out

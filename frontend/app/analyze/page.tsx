@@ -5,18 +5,33 @@ import { Shield, Loader2, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import FundSearchInput from '@/components/fund-input/FundSearchInput';
 import PortfolioBuilder from '@/components/fund-input/PortfolioBuilder';
+import PortfolioImport from '@/components/fund-input/PortfolioImport';
 import AnalysisDashboard from '@/components/analytics/AnalysisDashboard';
 import { analyzePortfolio } from '@/lib/api-client';
-import { AnalysisResult, FundSearchResult } from '@/lib/types';
+import { AnalysisResult, FundSearchResult, Holding } from '@/lib/types';
 
 export default function AnalyzePage() {
-  const [selectedFunds, setSelectedFunds] = useState<(FundSearchResult & { units: number })[]>([]);
+  const [selectedFunds, setSelectedFunds] = useState<(FundSearchResult & { units: number; custom_holdings?: Holding[] })[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
   const handleAddFund = (fund: FundSearchResult) => {
     if (selectedFunds.find(f => f.scheme_code === fund.scheme_code)) return;
     setSelectedFunds([...selectedFunds, { ...fund, units: 0 }]);
+  };
+
+  const handleImport = (holdings: Holding[]) => {
+    // Generate a unique code for the imported fund
+    const code = `CUSTOM_${Date.now()}`;
+    const newFund = {
+      scheme_code: code,
+      scheme_name: 'Imported Portfolio',
+      amc_name: 'User Defined',
+      units: 1, // Treat imported as 1 unit of value
+      nav: 0,
+      custom_holdings: holdings
+    };
+    setSelectedFunds([...selectedFunds, newFund]);
   };
 
   const handleUpdateUnits = (code: string, units: number) => {
@@ -33,7 +48,9 @@ export default function AnalyzePage() {
     try {
       const data = await analyzePortfolio(selectedFunds.map(f => ({
         scheme_code: f.scheme_code,
-        units: f.units
+        scheme_name: f.scheme_name,
+        units: f.units,
+        custom_holdings: f.custom_holdings
       })));
       setResult(data);
     } catch (error) {
@@ -117,6 +134,7 @@ export default function AnalyzePage() {
           <div className="bg-[#111827] border border-[#1e293b] rounded-xl p-5">
             <div className="section-label mb-3">Add Fund</div>
             <FundSearchInput onSelect={handleAddFund} />
+            <PortfolioImport onImport={handleImport} />
           </div>
           <PortfolioBuilder funds={selectedFunds} onUpdateUnits={handleUpdateUnits} onRemove={handleRemove} />
           <div className="pt-6 flex flex-col items-center gap-3">

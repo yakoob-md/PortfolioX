@@ -71,7 +71,7 @@ class AnalysisResult(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
 
 class PortfolioAnalysisRequest(BaseModel):
-    funds: List[Dict] # List of {scheme_code, units}
+    funds: List[Dict] # List of {scheme_code, units, custom_holdings: Optional[List[Holding]]}
 
 class FundSearchResponse(BaseModel):
     results: List[FundBase]

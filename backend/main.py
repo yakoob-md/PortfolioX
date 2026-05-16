@@ -32,11 +32,30 @@ async def lifespan(app: FastAPI):
         logger.info("Database connection successful")
     except Exception as e:
         logger.error(f"Database connection failed: {e}")
-        # We don't exit here to allow the app to start even if DB is temporarily down
+    
+    # Initialize Scheduler for background jobs
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from services.amfi_sync import AMFISyncService
+    from db.database import AsyncSessionLocal
+    
+    scheduler = AsyncIOScheduler()
+    
+    async def scheduled_sync():
+        logger.info("Running scheduled AMFI sync...")
+        async with AsyncSessionLocal() as session:
+            service = AMFISyncService(session)
+            await service.sync_scheme_master()
+            await session.commit()
+            
+    # Schedule sync every day at 3 AM
+    scheduler.add_job(scheduled_sync, 'cron', hour=3)
+    scheduler.start()
+    logger.info("Background scheduler started")
     
     yield
     
     # Shutdown: Dispose engine
+    scheduler.shutdown()
     await engine.dispose()
     logger.info("Database connection closed")
 
