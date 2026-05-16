@@ -11,8 +11,11 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     
     AMFI_BASE_URL: str = "https://api.mfapi.in"
-    AMFI_SCHEME_MASTER_URL: str = "https://www.amfiindia.com/spages/NAVAll.txt"
+    AMFI_SCHEME_MASTER_URL: str = "https://portal.amfiindia.com/spages/NAVAll.txt"
     
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(".env", "backend/.env"),
+        extra="ignore"
+    )
 
 settings = Settings()

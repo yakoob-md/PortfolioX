@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 async def fetch_amfi_data() -> str:
     """Fetch the NAVAll.txt file from AMFI."""
     logger.info(f"Fetching AMFI data from {settings.AMFI_SCHEME_MASTER_URL}")
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
         response = await client.get(settings.AMFI_SCHEME_MASTER_URL)
         response.raise_for_status()
         return response.text
