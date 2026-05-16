@@ -7,6 +7,8 @@ from db.database import get_db
 from db.models import TaxSession
 from services.pdf_parser import CAMSParser
 from services.tax_engine import TaxEngine
+from typing import List
+from models.tax_schemas import Folio
 import json
 import logging
 
@@ -72,3 +74,26 @@ async def get_tax_report(session_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Tax report not found or has expired.")
         
     return tax_session.tax_data
+
+@router.post("/manual")
+async def calculate_tax_manual(folios: List[Folio], db: AsyncSession = Depends(get_db)):
+    try:
+        tax_engine = TaxEngine()
+        tax_calculation = tax_engine.calculate_gains(folios)
+        
+        # Save to db
+        tax_session = TaxSession(tax_data=tax_calculation.model_dump(mode='json'))
+        db.add(tax_session)
+        await db.commit()
+        await db.refresh(tax_session)
+        
+        tax_calculation.session_id = tax_session.session_id
+        
+        # Update the stored json to include session_id
+        tax_session.tax_data = tax_calculation.model_dump(mode='json')
+        await db.commit()
+        
+        return tax_calculation
+    except Exception as e:
+        logger.error(f"Manual tax calculation error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to calculate tax for the provided transactions.")

@@ -3,16 +3,18 @@ import sys
 import os
 import json
 
-# Add backend to path
-sys.path.append(os.path.join(os.getcwd(), 'backend'))
+# Add project root and backend folder to path
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(BASE_DIR)
+sys.path.append(os.path.join(BASE_DIR, 'backend'))
 
 # Load environment variables
 from dotenv import load_dotenv
-load_dotenv(os.path.join(os.getcwd(), 'backend', '.env'))
+load_dotenv(os.path.join(BASE_DIR, 'backend', '.env'))
 
-from db.database import AsyncSessionLocal
-from db.repositories.fund_repo import FundRepository
-from db.models import Fund
+from backend.db.database import AsyncSessionLocal
+from backend.db.repositories.fund_repo import FundRepository
+from backend.db.models import Fund
 
 async def find_funds():
     async with AsyncSessionLocal() as session:

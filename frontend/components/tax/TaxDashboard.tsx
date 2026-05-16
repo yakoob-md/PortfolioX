@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { IndianRupee, TrendingDown, Target, List, ArrowDownRight, ArrowUpRight, Calculator, ExternalLink } from 'lucide-react';
+import { IndianRupee, TrendingDown, Target, List, ArrowDownRight, ArrowUpRight, Calculator, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 const COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6'];
