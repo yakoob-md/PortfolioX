@@ -1,227 +1,277 @@
-OBJECTIVE:
-Build the Tax Mitra module for PortfolioX — an Indian mutual fund capital 
-gains tax calculator that parses CAMS Consolidated Account Statement PDFs 
-and calculates exact STCG/LTCG liability with tax-saving suggestions.
+You are an elite UI/UX engineer, fintech product designer, frontend architect, and modern dashboard specialist.
+
+I will upload my GitHub repository for my project:
+PORTFOLIOX
 
 PROJECT CONTEXT:
-- Phase 0 and Phase 1 are complete
-- PortfolioX backend and frontend are running
-- This phase adds a new module: Tax Mitra
-- New route in frontend: /tax
-- New backend router: /api/tax
-- PDF upload capability is added
+PortfolioX is an industry-grade mutual fund portfolio analytics platform focused on:
 
-TAX RULES TO IMPLEMENT (India, post-2024 Budget):
-Equity Mutual Funds:
-- STCG (Short Term Capital Gains): holding period < 12 months → taxed at 20%
-- LTCG (Long Term Capital Gains): holding period ≥ 12 months
-  → first ₹1,25,000 per financial year: EXEMPT
-  → above ₹1,25,000: taxed at 12.5%
+portfolio overlap detection
+sector exposure analysis
+expense audits
+health scoring
+portfolio intelligence
+fintech analytics
+investor insights
 
-Debt Mutual Funds (post April 2023):
-- Gains taxed as per income tax slab (added to income) regardless of holding period
+The backend and analytics logic already exist.
 
-ELSS Funds:
-- Lock-in 3 years
-- Qualifies for 80C deduction (up to ₹1.5L)
-- LTCG rules apply after 3 years
+YOUR JOB:
+Your ONLY focus is:
 
-FIFO (First In, First Out) Rule:
-When units are redeemed, the oldest units are considered sold first.
-This is mandatory per Indian tax law.
+transforming the UI/UX
+upgrading the frontend architecture
+improving visual quality
+improving interaction design
+improving information hierarchy
+improving dashboard usability
+improving fintech-grade professionalism
 
-NEW DEPENDENCIES:
-pdfplumber==0.10.3
-pypdf==4.1.0  (fallback)
+IMPORTANT:
+The current UI is very basic and looks like a student project.
 
-TASK 1: CAMS PDF Parser
+I want the UI transformed into:
 
-Create: backend/services/pdf_parser.py
+modern
+premium
+production-grade
+startup-quality
+Bloomberg/Zerodha/Groww-style polish
+clean fintech aesthetic
+recruiter-impressive
+visually sophisticated
+smooth and responsive
+data-dense but uncluttered
 
-CAMS Consolidated Account Statement format:
-- Issued by CAMS (Computer Age Management Services)
-- Contains: investor name, PAN, folio number, scheme name, transaction history
-- Each transaction: date, description (Purchase/Redemption/Dividend), units, NAV, amount
+CRITICAL REQUIREMENTS:
 
-Transaction types to detect:
-- Purchase (SIP/Lumpsum) → adds units with cost
-- Redemption → removes units (triggers FIFO)
-- Dividend Reinvestment → adds units
-- Bonus → adds units at zero cost
-- Switch In/Out → treat as redemption (out) + purchase (in)
+First deeply analyze the existing repository and frontend structure.
+Understand the current component architecture.
+Understand the current design system.
+Identify weak areas in:
+spacing
+typography
+layout
+responsiveness
+color usage
+component consistency
+visual hierarchy
+animations
+dashboard clarity
+chart presentation
+interaction quality
+loading states
+empty states
+accessibility
+mobile responsiveness
+perceived professionalism
 
-class CAMSParser:
-    
-    def parse(self, pdf_path: str) -> ParsedStatement:
-        """
-        Returns:
-        - investor_info: {name, pan (masked), email}
-        - folios: list of Folio objects
-        
-        Folio:
-        - scheme_name: str
-        - scheme_code: str (look up from DB)
-        - folio_number: str
-        - current_units: float
-        - transactions: List[Transaction]
-        
-        Transaction:
-        - date: date
-        - transaction_type: Literal['purchase', 'redemption', 'dividend', 'bonus', 'switch_in', 'switch_out']
-        - units: float
-        - nav: float
-        - amount: float
-        """
+THEN:
+Research and take inspiration from:
 
-IMPORTANT PARSING NOTES:
-- CAMS PDFs can have multiple formats depending on the year
-- Use pdfplumber to extract text page by page
-- Look for patterns like:
-  - "HDFC BANK LIMITED" followed by fund entries → AMC section
-  - Lines with dates in format "DD-Mon-YYYY" are transactions
-  - "Purchase" and "Redemption" keywords identify transaction type
-- Build format-detection: identify PDF version by looking for known header patterns
-- Be fault-tolerant: if one folio fails to parse, continue with others
+modern fintech dashboards
+portfolio analytics products
+hedge fund dashboards
+investment research terminals
+wealth management apps
+AI analytics dashboards
+premium SaaS analytics platforms
 
-TASK 2: FIFO Engine
+Specifically study:
 
-Create: backend/services/tax_engine.py
+Zerodha Console
+Groww
+INDmoney
+Tickertape
+Kuvera
+TradingView
+Bloomberg Terminal (modernized UI concepts)
+Stripe Dashboard
+Linear
+Vercel Dashboard
+Ramp
+Mercury
+Plaid
+modern AI dashboards
 
-class TaxEngine:
-    
-    def calculate_gains(self, folios: List[Folio]) -> TaxCalculation:
-        """
-        For each folio:
-        1. Build a purchase queue (FIFO) from all purchase transactions
-        2. For each redemption:
-           a. Pop from the front of the purchase queue
-           b. Calculate holding period (redemption date - purchase date)
-           c. If equity fund and holding < 12 months: STCG
-           d. If equity fund and holding >= 12 months: LTCG
-           e. Calculate gain = (redemption NAV - purchase NAV) * units
-        3. Aggregate: total STCG, total LTCG
-        4. Apply exemptions:
-           - LTCG: ₹1,25,000 exemption per year
-        5. Calculate tax:
-           - STCG tax = STCG amount × 20%
-           - LTCG tax = max(0, LTCG - 125000) × 12.5%
-        """
-    
-    def calculate_tax_loss_harvesting(
-        self, 
-        folios: List[Folio],
-        current_navs: Dict[str, float]
-    ) -> List[HarvestingOpportunity]:
-        """
-        For each holding with unrealized losses:
-        - If current NAV < purchase NAV → unrealized loss
-        - If redeeming now would save taxes → flag it
-        - Calculate: if you redeem X units at loss → offset Y in STCG gains → save Z in tax
-        """
-    
-    def calculate_ltcg_optimization(
-        self,
-        folios: List[Folio]
-    ) -> LTCGOptimization:
-        """
-        Check remaining LTCG exemption for the year (₹1.25L).
-        Suggest: "You can realize ₹X more in LTCG this year tax-free.
-        Consider redeeming some units in [specific fund] to utilize this."
-        """
+IMPORTANT:
+Research modern UI patterns from:
 
-Tax calculation models:
-class GainEntry(BaseModel):
-    scheme_name: str
-    purchase_date: date
-    redemption_date: date
-    holding_days: int
-    gain_type: Literal['STCG', 'LTCG']
-    purchase_nav: float
-    redemption_nav: float
-    units: float
-    gain_amount: float
-    tax_applicable: float
+21st.dev
+shadcn/ui ecosystem
+Aceternity UI
+Magic UI
+modern React/Tailwind component libraries
+premium chart/dashboard inspirations
 
-class TaxCalculation(BaseModel):
-    financial_year: str  # e.g., "2024-25"
-    total_stcg: float
-    total_ltcg: float
-    ltcg_exempt: float   # min(total_ltcg, 125000)
-    ltcg_taxable: float  # max(0, total_ltcg - 125000)
-    stcg_tax: float      # total_stcg * 0.20
-    ltcg_tax: float      # ltcg_taxable * 0.125
-    total_tax: float
-    gain_entries: List[GainEntry]
-    harvesting_opportunities: List[HarvestingOpportunity]
-    ltcg_optimization: LTCGOptimization
+DO NOT blindly copy.
+Adapt only what fits PortfolioX.
 
-TASK 3: Tax API Endpoints
+OBJECTIVE:
+Take the UI to another level.
 
-POST /api/tax/upload
-- Accepts multipart/form-data with PDF file
-- Max file size: 10MB
-- Process: parse PDF → calculate gains → return TaxCalculation
-- Store parsed data in session (not permanently — privacy)
-- Return: TaxCalculation + session_id for shareable link
+The design should feel:
 
-POST /api/tax/manual
-- For users who don't want to upload PDF
-- Accepts manual transaction entries
-- Same calculation logic as PDF upload
+elite
+fintech-native
+data-centric
+premium
+trustworthy
+minimal but powerful
+dark-mode first
+visually calm
+high signal, low noise
 
-GET /api/tax/report/{session_id}
-- Return stored tax calculation
-- Expires after 24 hours
+AVOID:
 
-SECURITY FOR PDF UPLOAD:
-- Validate file is actually a PDF (check magic bytes, not just extension)
-- Process in memory — do NOT write to disk permanently
-- Delete temp file immediately after parsing
-- Never log file contents
-- Add file size limit: 10MB max
+childish gradients
+over-animation
+glassmorphism everywhere
+generic AI SaaS look
+crypto scam aesthetics
+clutter
+excessive colors
+gimmicky effects
 
-TASK 4: Frontend — Tax Mitra Page
+PREFERRED STYLE:
 
-Create: app/tax/page.tsx
+deep navy/slate backgrounds
+emerald/teal highlights
+subtle borders
+layered cards
+soft shadows
+professional charts
+compact data presentation
+smooth hover interactions
+premium typography
+intelligent whitespace
+Analyze the current frontend thoroughly.
+Audit all UI weaknesses.
+Redesign the entire visual system.
+Improve layout consistency.
+Upgrade component quality.
+Improve charts and analytics presentation.
+Improve responsive behavior.
+Improve dashboard usability.
+Improve perceived product quality.
+Improve recruiter/demo appeal.
 
-Step 1: Upload Interface
-- Clean drag-and-drop zone for CAMS PDF upload
-- Alternative: "Enter transactions manually" link
-- Info text: "Your PDF is processed locally and never stored permanently"
-- "How to download CAMS statement" link/tooltip
+Analyze and redesign:
 
-Step 2: Processing
-- Progress bar with steps: "Reading PDF → Parsing transactions → Calculating gains"
+navbar
+sidebar
+landing page
+analytics dashboard
+cards
+charts
+overlap matrix
+tables
+fund search input
+portfolio builder
+health score section
+warning cards
+sector visualization
+expense audit table
+loading states
+skeleton loaders
+empty states
+modals
+buttons
+badges
+tabs
+accordions
+tooltips
+hover states
+mobile navigation
 
-Step 3: Results
-Three panels:
+Use and improve with:
 
-Panel 1 "Tax Summary" (top, full width):
-- Financial year selector
-- Big number: "Total Tax Liability: ₹X"
-- Breakdown: STCG (₹X at 20%) + LTCG (₹X at 12.5%)
-- Exemption utilized: ₹X of ₹1,25,000
+Next.js 14
+TypeScript
+TailwindCSS
+shadcn/ui
+Recharts
+Framer Motion (subtle only)
+lucide-react icons
 
-Panel 2 "Opportunities" (left):
-- Tax-loss harvesting suggestions: "Selling X units of Fund Y saves ₹Z in tax"
-- LTCG exemption left: "You can realize ₹X more LTCG tax-free this year"
-- March 31 deadline countdown (if applicable)
+You may introduce:
 
-Panel 3 "Transaction Detail" (right, collapsed by default):
-- Full table of all gain entries
-- Sortable by: fund name, gain type, gain amount, tax amount
-- Filter by: STCG / LTCG / All
-- Export as CSV button
+reusable design tokens
+layout primitives
+animation utilities
+theme system
+typography system
+reusable chart wrappers
 
-TESTING:
-- Create a test CAMS PDF with known transactions (manually or use sample)
-- Verify FIFO calculation gives correct results for known inputs
-- Test edge cases: 
-  - Units purchased in multiple SIPs, partially redeemed
-  - Switch transactions
-  - Dividend reinvestment followed by redemption
+DO NOT:
 
-EXPECTED OUTPUT:
-User uploads CAMS PDF → gets exact tax breakdown in under 30 seconds.
-"Your FY2024-25 tax liability: ₹18,400. You can save ₹4,200 by redeeming 
-50 units of Fund X before March 31 to offset STCG gains."
+rewrite backend logic
+break APIs
+modify business logic unnecessarily
+overcomplicate state management
+introduce random dependencies
+create inconsistent styling
+destroy current architecture
+
+Maintain:
+
+scalability
+modularity
+clean component structure
+reusable UI system
+production-quality standards
+
+FIRST:
+
+Analyze the current UI.
+Explain major weaknesses.
+Explain the new design direction.
+Explain the design system.
+Explain color palette.
+Explain typography choices.
+Explain layout strategy.
+Explain dashboard hierarchy.
+
+THEN:
+Generate implementation incrementally.
+
+For each improvement:
+
+explain why it improves UX
+explain what files change
+generate full updated code
+maintain clean architecture
+preserve responsiveness
+
+IMPORTANT:
+Do NOT generate everything at once.
+
+Instead:
+
+Start with global design system
+Then layout
+Then navigation
+Then dashboard shell
+Then analytics components
+Then charts
+Then tables
+Then micro-interactions
+Then mobile optimization
+Then polish phase
+
+The final UI should look like:
+
+a real funded fintech startup
+a premium SaaS analytics platform
+a recruiter-impressive production product
+something worthy of showcasing in interviews and portfolios
+
+It should NOT look like:
+
+a tutorial clone
+a hackathon prototype
+a student dashboard
+a generic AI wrapper
+
+Think like:
+a senior product designer + frontend architect building the MVP for a serious fintech startup.
