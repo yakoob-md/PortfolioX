@@ -1,0 +1,247 @@
+i am building this 
+
+PORTFOLIOX PLATFORM
+│
+├── CORE ENGINE (Build first)
+│   ├── Portfolio Ingestion (manual + CAMS PDF)
+│   ├── Holdings Aggregator (stock-level view)
+│   ├── Overlap Detector
+│   ├── Sector/Market-cap Exposure
+│   ├── Expense Ratio Auditor
+│   └── Portfolio Health Score
+│
+
+┌─────────────────────────────────────────────────────────────┐
+│                    CLIENT LAYER                              │
+│                                                             │
+│   Next.js 14 App Router (TypeScript)                        │
+│   ├── Server Components (SEO, initial data)                 │
+│   ├── Client Components (charts, interactions)              │
+│   └── API Routes (thin BFF layer)                           │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ HTTPS / REST
+┌──────────────────────▼──────────────────────────────────────┐
+│                  API GATEWAY LAYER                           │
+│              FastAPI (Python) on Railway                     │
+│   ┌─────────────┐ ┌───────────────┐ ┌────────────────────┐ │
+│   │  /portfolio │ │  /analytics   │ │  /tax              │ │
+│   │  router     │ │  router       │ │  router            │ │
+│   └──────┬──────┘ └───────┬───────┘ └─────────┬──────────┘ │
+└──────────┼────────────────┼───────────────────┼────────────┘
+           │                │                   │
+┌──────────▼────────────────▼───────────────────▼────────────┐
+│                  SERVICE LAYER                               │
+│                                                             │
+│  ┌───────────────┐  ┌────────────────┐  ┌────────────────┐ │
+│  │ Fund Resolver │  │ Holdings Cache │  │ Overlap Engine │ │
+│  │               │  │                │  │                │ │
+│  │ name → code   │  │ Redis/SQLite   │  │ vector cosine  │ │
+│  └───────┬───────┘  └──────┬─────────┘  └───────┬────────┘ │
+│          │                 │                     │          │
+│  ┌───────▼───────┐  ┌──────▼─────────┐  ┌───────▼────────┐ │
+│  │ Tax Engine    │  │ LLM Explainer  │  │ Health Scorer  │ │
+│  │ FIFO + rules  │  │ Gemini Flash   │  │ weighted algo  │ │
+│  └───────────────┘  └────────────────┘  └────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+           │
+┌──────────▼──────────────────────────────────────────────────┐
+│                   DATA LAYER                                 │
+│                                                             │
+│  PostgreSQL (Supabase)     Redis (Upstash)                  │
+│  ├── funds                 ├── nav_cache (24h TTL)          │
+│  ├── fund_holdings         ├── holdings_cache (7d TTL)      │
+│  ├── sessions              └── search_cache (1h TTL)        │
+│  └── user_portfolios                                        │
+└─────────────────────────────────────────────────────────────┘
+           │
+┌──────────▼──────────────────────────────────────────────────┐
+│               EXTERNAL DATA SOURCES                          │
+│  mfapi.in (NAV, fund list)                                  │
+│  AMFI website (scheme master, portfolio disclosures)         │
+│  NSE India (index data, stock info)                          │
+│  Gemini API (LLM explanations)                              │
+└─────────────────────────────────────────────────────────────┘
+
+Tech Stack (Final Decisions)
+Frontend: Next.js 14 with App Router + TypeScript + Tailwind CSS
+
+Why Next.js over plain React: Server components for SEO, API routes as BFF, better performance
+Why TypeScript: You will thank yourself in month 2 when the data structures get complex
+
+Backend: Python FastAPI
+
+Why Python over Node: NumPy/Pandas for financial calculations, pdfplumber for PDF parsing, vastly better data ecosystem
+Why FastAPI over Flask/Django: Async support, auto-generated API docs, type safety with Pydantic
+
+Database: Supabase (PostgreSQL, free tier)
+
+Why not MongoDB: Financial data is highly relational. Fund → Holdings → Stocks. Use relational DB.
+
+Cache: Upstash Redis (free tier: 10k requests/day)
+Charts: Recharts (free, React-native, good enough)
+
+Upgrade path: D3.js when you need custom overlap heatmaps
+
+LLM: Google Gemini 1.5 Flash (free tier: 1M tokens/day)
+PDF Parsing: pdfplumber (Python, free)
+Deployment:
+
+Frontend: Vercel (free)
+Backend: Railway (free tier: $5 credit/month, enough for hobby)
+DB: Supabase (free tier)
+Cache: Upstash (free tier)
+
+portfoliox/
+│
+├── frontend/                          # Next.js 14 App
+│   ├── app/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx                   # Landing page
+│   │   ├── analyze/
+│   │   │   └── page.tsx               # Main analysis tool
+│   │   ├── report/
+│   │   │   └── [sessionId]/page.tsx   # Shareable report
+│   │   └── api/                       # Next.js API routes (BFF)
+│   │       ├── analyze/route.ts
+│   │       └── funds/search/route.ts
+│   ├── components/
+│   │   ├── ui/                        # Shadcn components
+│   │   ├── fund-input/
+│   │   │   ├── FundSearchInput.tsx
+│   │   │   └── PortfolioBuilder.tsx
+│   │   ├── analytics/
+│   │   │   ├── OverlapMatrix.tsx
+│   │   │   ├── SectorPieChart.tsx
+│   │   │   ├── MarketCapBreakdown.tsx
+│   │   │   ├── HealthScoreGauge.tsx
+│   │   │   └── ExpenseAudit.tsx
+│   │   └── report/
+│   │       └── HealthReport.tsx
+│   ├── lib/
+│   │   ├── api-client.ts              # Backend API calls
+│   │   └── types.ts                   # Shared TypeScript types
+│   └── hooks/
+│       └── usePortfolioAnalysis.ts
+│
+├── backend/                           # FastAPI Python
+│   ├── main.py
+│   ├── config.py                      # Settings, env vars
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   ├── funds.py                   # Fund search, metadata
+│   │   ├── portfolio.py               # Portfolio analysis
+│   │   └── tax.py                     # Phase 2: Tax module
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── fund_resolver.py           # Fund name → scheme_code
+│   │   ├── holdings_fetcher.py        # Fetch from AMFI / cache
+│   │   ├── overlap_engine.py          # Core overlap logic
+│   │   ├── sector_analyzer.py         # Sector concentration
+│   │   ├── health_scorer.py           # 0–100 score calculation
+│   │   ├── llm_explainer.py           # Gemini API integration
+│   │   └── tax_engine.py              # Phase 2: FIFO tax calc
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── schemas.py                 # Pydantic models
+│   ├── db/
+│   │   ├── __init__.py
+│   │   ├── database.py                # SQLAlchemy setup
+│   │   ├── cache.py                   # Redis/Upstash client
+│   │   └── repositories/
+│   │       ├── fund_repo.py
+│   │       └── holdings_repo.py
+│   ├── jobs/                          # Background/cron jobs
+│   │   ├── sync_nav.py                # Daily NAV sync
+│   │   └── sync_holdings.py           # Monthly holdings sync
+│   └── tests/
+│       ├── test_overlap_engine.py
+│       └── test_health_scorer.py
+│
+├── data/                              # Seed data, scripts
+│   ├── scripts/
+│   │   ├── load_amfi_schemes.py       # One-time seed script
+│   │   └── load_holdings.py          # Holdings ingestion
+│   └── samples/
+│       └── sample_cams.pdf
+│
+├── docker-compose.yml                 # Local dev environment
+├── .env.example
+└── README.md
+
+-- ============================================
+-- FUNDS MASTER (populated once from AMFI)
+-- ============================================
+CREATE TABLE funds (
+  scheme_code        VARCHAR(10) PRIMARY KEY,
+  scheme_name        TEXT NOT NULL,
+  amc_name           TEXT NOT NULL,
+  category           TEXT,          -- 'Large Cap', 'Flexi Cap', etc.
+  sub_category       TEXT,
+  plan_type          TEXT,          -- 'Direct', 'Regular'
+  option_type        TEXT,          -- 'Growth', 'IDCW'
+  nav                DECIMAL(12,4),
+  nav_date           DATE,
+  expense_ratio      DECIMAL(5,3),  -- in percentage
+  aum_crore          DECIMAL(15,2),
+  launch_date        DATE,
+  is_active          BOOLEAN DEFAULT true,
+  created_at         TIMESTAMP DEFAULT NOW(),
+  updated_at         TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================
+-- FUND HOLDINGS (from AMFI monthly disclosures)
+-- ============================================
+CREATE TABLE fund_holdings (
+  id                 SERIAL PRIMARY KEY,
+  scheme_code        VARCHAR(10) REFERENCES funds(scheme_code),
+  disclosure_date    DATE NOT NULL,
+  stock_isin         VARCHAR(20),
+  stock_name         TEXT NOT NULL,
+  sector             TEXT,
+  holding_percentage DECIMAL(6,3),  -- % of fund's AUM
+  market_value_cr    DECIMAL(15,2),
+  asset_type         TEXT,          -- 'Equity', 'Debt', 'Cash', 'Other'
+  created_at         TIMESTAMP DEFAULT NOW(),
+  UNIQUE(scheme_code, disclosure_date, stock_isin)
+);
+
+-- ============================================
+-- USER SESSIONS (no auth in MVP)
+-- ============================================
+CREATE TABLE analysis_sessions (
+  session_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  input_data         JSONB NOT NULL,   -- list of {fund_name, units, purchase_date}
+  analysis_result    JSONB,            -- complete analysis output
+  health_score       SMALLINT,         -- 0-100
+  created_at         TIMESTAMP DEFAULT NOW(),
+  expires_at         TIMESTAMP DEFAULT (NOW() + INTERVAL '7 days')
+);
+
+-- ============================================
+-- FOR PHASE 2: USER AUTH + PORTFOLIOS
+-- ============================================
+CREATE TABLE users (
+  user_id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email              TEXT UNIQUE NOT NULL,
+  name               TEXT,
+  created_at         TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE portfolios (
+  portfolio_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id            UUID REFERENCES users(user_id),
+  name               TEXT DEFAULT 'My Portfolio',
+  holdings           JSONB NOT NULL,
+  last_analyzed      TIMESTAMP,
+  created_at         TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================
+-- INDEXES (critical for performance)
+-- ============================================
+CREATE INDEX idx_fund_holdings_scheme ON fund_holdings(scheme_code);
+CREATE INDEX idx_fund_holdings_date ON fund_holdings(disclosure_date);
+CREATE INDEX idx_fund_holdings_isin ON fund_holdings(stock_isin);
+CREATE INDEX idx_funds_amc ON funds(amc_name);
+CREATE INDEX idx_funds_category ON funds(category);

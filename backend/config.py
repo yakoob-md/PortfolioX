@@ -1,0 +1,18 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
+
+class Settings(BaseSettings):
+    """
+    Application settings and environment variables.
+    """
+    DATABASE_URL: str
+    REDIS_URL: str
+    GEMINI_API_KEY: Optional[str] = ""
+    ENVIRONMENT: str = "development"
+    
+    AMFI_BASE_URL: str = "https://api.mfapi.in"
+    AMFI_SCHEME_MASTER_URL: str = "https://www.amfiindia.com/spages/NAVAll.txt"
+    
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+settings = Settings()
