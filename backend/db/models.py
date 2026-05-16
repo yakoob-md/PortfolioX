@@ -65,3 +65,14 @@ class AnalysisSession(Base):
     health_score: Mapped[Optional[int]] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now() + interval '7 days'"))
+
+class TaxSession(Base):
+    """
+    User tax calculations for storing and sharing reports.
+    """
+    __tablename__ = "tax_sessions"
+
+    session_id: Mapped[str] = mapped_column(Text, primary_key=True, server_default=text("gen_random_uuid()::text"))
+    tax_data: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now() + interval '1 days'"))
