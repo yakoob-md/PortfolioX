@@ -1,279 +1,472 @@
-PHASE 0 — Foundation & Infrastructure
-Duration: 3–4 days | Difficulty: Easy
-Goal: Working dev environment, database up, AMFI data loaded, backend returns fund search results.
-Output: You can type "Parag Parikh" and get back scheme details from your own API.
-Why it matters: Every subsequent phase depends on clean, queryable fund data. Get this wrong and you'll spend weeks debugging schema issues later.
-Do NOT add yet: Any UI beyond a raw API test, any AI, any analysis logic.
-What you'll learn: FastAPI setup, PostgreSQL with SQLAlchemy, AMFI data structure, basic ETL pipeline.
-Resume value: Low on its own, foundational for everything above.
+PHASE 1 — Portfolio Overlap Detector (The Core MVP)
+Duration: 10–14 days | Difficulty: Medium
+Goal: User enters 3–5 fund names + units → system returns overlap matrix + sector breakdown + expense audit + health score + 1-paragraph LLM explanation.
+Output: A working, deployable tool that does something NO free tool currently does cleanly.
+Demo: "I put in my 7 funds. It told me Parag Parikh and Mirae Asset Large Cap share 14 of their top 20 stocks. I had no idea."
+Why this phase matters: This is the resume centrepiece. Every other phase builds on this. This is what you show in interviews.
+Do NOT add yet: Auth, PDF upload, tax calculation, chatbot.
+Resume value: ⭐⭐⭐⭐⭐ — this alone is interview-worthy.
+
+core mvp
 
 OBJECTIVE:
-Set up the complete development foundation for PortfolioX — an Indian mutual fund 
-portfolio analytics platform. This is Phase 0: Infrastructure & Data Foundation.
+Build the core MVP feature of PortfolioX: the Portfolio Overlap Detector.
+User inputs a list of mutual funds with units → system returns a complete 
+portfolio analysis including overlap matrix, sector exposure, expense audit, 
+and health score with AI explanation.
 
 PROJECT CONTEXT:
-- PortfolioX is a web application that analyzes mutual fund portfolios
-- Backend: Python FastAPI
-- Frontend: Next.js 14 (will be built in Phase 1)
-- Database: PostgreSQL via Supabase
-- Cache: Redis via Upstash
-- Data source: AMFI India public data
-- Deployment target: Railway (backend), Vercel (frontend)
+- Phase 0 is complete: FastAPI backend running, 20,000+ funds in PostgreSQL
+- This phase adds: holdings data, overlap engine, health scorer, LLM explainer
+- Frontend (Next.js) also gets built in this phase
+- Target: fully deployable product that solves a real problem
 
-TECH STACK FOR THIS PHASE:
-- Python 3.11+
-- FastAPI 0.110+
-- SQLAlchemy 2.0 (async)
-- asyncpg (PostgreSQL async driver)
-- pydantic v2
-- httpx (async HTTP client)
-- redis (Upstash client)
-- python-dotenv
+PART A — BACKEND ADDITIONS
 
-TASK BREAKDOWN:
-This phase has 4 tasks:
-1. Set up the FastAPI project structure
-2. Set up PostgreSQL connection and run migrations
-3. Write and run the AMFI scheme master data seed script
-4. Expose a /funds/search endpoint and verify it works
+NEW DEPENDENCIES TO ADD:
+numpy==1.26.4
+pandas==2.2.1
+google-generativeai==0.5.0
 
-FOLDER STRUCTURE TO CREATE:
-portfoliox/
-└── backend/
-    ├── main.py
-    ├── config.py
-    ├── requirements.txt
-    ├── .env.example
-    ├── routers/
-    │   ├── __init__.py
-    │   └── funds.py
-    ├── services/
-    │   ├── __init__.py
-    │   └── fund_resolver.py
-    ├── models/
-    │   ├── __init__.py
-    │   └── schemas.py
-    ├── db/
-    │   ├── __init__.py
-    │   ├── database.py
-    │   ├── cache.py
-    │   └── repositories/
-    │       ├── __init__.py
-    │       └── fund_repo.py
-    └── data/
-        └── scripts/
-            └── load_amfi_schemes.py
+TASK 1: Data Ingestion — Fund Holdings
 
-IMPLEMENTATION STEPS — DO THESE IN ORDER:
+Create: backend/jobs/sync_holdings.py
 
-STEP 1: requirements.txt
-Create requirements.txt with exactly these packages:
-fastapi==0.110.0
-uvicorn[standard]==0.27.0
-sqlalchemy[asyncio]==2.0.28
-asyncpg==0.29.0
-pydantic==2.6.3
-pydantic-settings==2.2.1
-httpx==0.27.0
-redis==5.0.3
-python-dotenv==1.0.1
-alembic==1.13.1
+This script fetches mutual fund holdings from AMFI monthly portfolio disclosures.
 
-STEP 2: config.py
-Create a Settings class using pydantic-settings that reads these env vars:
-- DATABASE_URL (PostgreSQL connection string from Supabase)
-- REDIS_URL (Upstash Redis URL)
-- GEMINI_API_KEY (for Phase 1 — just include as empty for now)
-- ENVIRONMENT (development/production)
-- AMFI_BASE_URL = "https://api.mfapi.in"
-- AMFI_SCHEME_MASTER_URL = "https://www.amfiindia.com/spages/NAVAll.txt"
+AMFI publishes portfolio disclosures at:
+https://www.amfiindia.com/research-information/other-data/scheme-portfolio
 
-STEP 3: db/database.py
-Set up SQLAlchemy async engine and session factory.
-Use asyncpg as the driver.
-Create a get_db() dependency for FastAPI.
+The data is in CSV/text format per AMC, published by the 10th of every month 
+for the previous month.
 
-STEP 4: DATABASE SCHEMA
-Create these tables using SQLAlchemy declarative models (not raw SQL):
+ALTERNATIVE (use this for MVP — faster): 
+Use the mfapi.in API which provides NAV history.
+For holdings, AMFI publishes them in a structured format.
 
-Table: funds
-- scheme_code: String(10), primary key
-- scheme_name: Text, not null
-- amc_name: Text, not null  
-- category: Text, nullable
-- sub_category: Text, nullable
-- plan_type: Text, nullable (values: 'Direct', 'Regular')
-- option_type: Text, nullable (values: 'Growth', 'IDCW', 'Bonus')
-- nav: Numeric(12,4), nullable
-- nav_date: Date, nullable
-- expense_ratio: Numeric(5,3), nullable
-- aum_crore: Numeric(15,2), nullable
-- launch_date: Date, nullable
-- is_active: Boolean, default True
-- created_at: DateTime with timezone, server default now()
-- updated_at: DateTime with timezone, server default now()
+For the MVP, use a simpler approach:
+1. Fetch the AMFI portfolio disclosure text for the most recent month
+2. It's a large text file with this approximate format:
+   Fund Name: HDFC Equity Fund
+   Portfolio as on: 31-Mar-2025
+   Company Name | ISIN | Industry | Quantity | Market Value (Rs. Lakhs) | % to NAV
+   
+3. Parse this into fund_holdings table entries
+4. Store with disclosure_date
 
-Table: fund_holdings
-- id: Integer, primary key, autoincrement
-- scheme_code: String(10), foreign key to funds.scheme_code
-- disclosure_date: Date, not null
-- stock_isin: String(20), nullable
-- stock_name: Text, not null
-- sector: Text, nullable
-- holding_percentage: Numeric(6,3), nullable
-- market_value_cr: Numeric(15,2), nullable
-- asset_type: Text, nullable (Equity/Debt/Cash/Other)
-- created_at: DateTime with timezone, server default now()
-- Unique constraint on (scheme_code, disclosure_date, stock_isin)
+NOTE: AMFI portfolio disclosures can be inconsistent in format.
+Build the parser to be fault-tolerant — skip lines that don't parse, 
+log the errors, continue processing.
 
-Create indexes on:
-- fund_holdings.scheme_code
-- fund_holdings.disclosure_date  
-- fund_holdings.stock_isin
-- funds.amc_name
+Also create a MANUAL HOLDINGS SEEDER for testing:
+Create a Python script that seeds test holdings for 10 popular funds 
+(HDFC Equity, Parag Parikh Flexi Cap, Mirae Asset Large Cap, SBI Bluechip, 
+Axis Flexi Cap, Kotak Flexi Cap, ICICI Pru Bluechip, DSP Tax Saver, 
+Nippon India Growth, Franklin India Prima)
 
-STEP 5: data/scripts/load_amfi_schemes.py
-Write an async Python script that:
-1. Fetches the AMFI NAVAll.txt file from: https://www.amfiindia.com/spages/NAVAll.txt
-2. Parses it — the format is:
-   - Lines starting with a number followed by semicolons are fund data
-   - Format: SchemeCode;ISINDivPayOut;ISINDivReinvestment;SchemeName;NAV;Date
-   - Section headers (like "Open Ended Schemes(Equity)") indicate category
-   - AMC names appear as standalone lines before the fund entries
-3. For each fund entry, extract:
-   - scheme_code, scheme_name, nav, nav_date
-   - amc_name (from the section header above it)
-   - plan_type: if "Direct" in scheme_name → 'Direct', else 'Regular'
-   - option_type: if "Growth" in scheme_name → 'Growth', elif "IDCW" in scheme_name → 'IDCW', else 'Other'
-4. Upsert all records into the funds table (insert or update on conflict)
-5. Print summary: total funds loaded, AMCs found, any errors
+For each fund, insert at least the top 20 holdings (look up real current 
+holdings from Value Research / AMFI website and hardcode for now — 
+this is acceptable for MVP).
 
-The NAVAll.txt file has ~20,000 entries. Parse all of them.
+This gives you REAL data to test overlap with immediately.
 
-STEP 6: db/repositories/fund_repo.py
-Create a FundRepository class with these async methods:
-- search_funds(query: str, limit: int = 10) → List[Fund]
-  - Use PostgreSQL ILIKE for case-insensitive search on scheme_name
-  - Also search on amc_name
-  - Filter to is_active = true
-  - Order by: exact matches first, then partial matches
-- get_fund_by_code(scheme_code: str) → Fund | None
-- get_funds_by_codes(scheme_codes: List[str]) → List[Fund]
-- get_all_amcs() → List[str]
+TASK 2: Overlap Engine
 
-STEP 7: services/fund_resolver.py
-Create a FundResolver service that:
-- Takes a fund name string (user input, possibly fuzzy)
-- Returns the best matching scheme_code and Fund object
-- Uses the repository's search function
-- Also tries to handle common abbreviations: 
-  "PPFAS" → "Parag Parikh", "HDFC TF" → "HDFC Tax"
+Create: backend/services/overlap_engine.py
 
-STEP 8: routers/funds.py
-Create these API endpoints:
+class OverlapEngine:
+    
+    def compute_overlap(
+        self, 
+        fund_holdings: Dict[str, List[Holding]]  # scheme_code → holdings list
+    ) -> OverlapResult:
+        """
+        Core logic:
+        1. For each pair of funds (A, B), find common stocks
+        2. Calculate overlap % = sum of min(% in A, % in B) for each common stock
+        3. Return pairwise overlap matrix
+        
+        Example:
+        Fund A holds Reliance at 8%, Infosys at 6%
+        Fund B holds Reliance at 5%, TCS at 7%
+        Common stocks: Reliance
+        Overlap score = min(8, 5) = 5%
+        """
+    
+    def compute_sector_exposure(
+        self,
+        fund_holdings: Dict[str, List[Holding]],
+        weights: Dict[str, float]  # scheme_code → allocation weight (0-1)
+    ) -> Dict[str, float]:
+        """
+        Aggregate sector exposure across all funds weighted by allocation.
+        Returns: {"IT": 28.5, "Banking": 22.1, "FMCG": 15.3, ...}
+        """
+    
+    def compute_stock_concentration(
+        self,
+        fund_holdings: Dict[str, List[Holding]],
+        weights: Dict[str, float]
+    ) -> List[StockExposure]:
+        """
+        For each stock, calculate total portfolio exposure across all funds.
+        Returns sorted list: [{"stock": "Reliance", "exposure": 4.2, "funds": ["HDFC", "Parag Parikh"]}, ...]
+        """
+    
+    def compute_marketcap_breakdown(
+        self,
+        fund_holdings: Dict[str, List[Holding]],
+        weights: Dict[str, float]
+    ) -> Dict[str, float]:
+        """
+        Returns: {"Large Cap": 65.2, "Mid Cap": 22.1, "Small Cap": 8.4, "Debt/Cash": 4.3}
+        Classify stocks by market cap using NSE classification or AUM-based heuristic.
+        """
 
-GET /api/funds/search?q={query}&limit={limit}
-- Calls fund_resolver.search_funds
-- Returns: List of {scheme_code, scheme_name, amc_name, nav, plan_type, category}
-- Validates: query must be at least 2 characters
-- Cache results in Redis for 1 hour
+Data models for this service (in schemas.py):
 
-GET /api/funds/{scheme_code}
-- Returns full fund details
-- Cache in Redis for 24 hours
+class Holding(BaseModel):
+    stock_isin: str | None
+    stock_name: str
+    sector: str | None
+    holding_percentage: float
+    asset_type: str  # Equity/Debt/Cash
 
-GET /api/funds/amcs
-- Returns list of all unique AMC names
-- Cache in Redis for 24 hours
+class PortfolioFund(BaseModel):
+    scheme_code: str
+    scheme_name: str
+    units: float
+    nav: float
+    current_value: float
+    expense_ratio: float | None
+    plan_type: str  # Direct/Regular
 
-STEP 9: main.py
-Set up FastAPI app with:
-- Title: "PortfolioX API"
-- Version: "0.1.0"
-- CORS middleware: allow origins ["http://localhost:3000"] in dev, configure from env in prod
-- Include the funds router with prefix "/api"
-- Add a GET /health endpoint that returns {"status": "ok", "version": "0.1.0"}
-- Add startup event that runs database connection check
+class OverlapPair(BaseModel):
+    fund_a_code: str
+    fund_a_name: str
+    fund_b_code: str
+    fund_b_name: str
+    overlap_score: float  # 0-100
+    common_stocks: List[str]
+    common_stock_count: int
 
-STEP 10: db/cache.py
-Set up Redis client using Upstash URL.
-Create helper functions:
-- get_cached(key: str) → str | None
-- set_cached(key: str, value: str, ttl_seconds: int)
-- delete_cached(key: str)
-Handle connection errors gracefully — if Redis is down, the app should still work (just slower).
+class AnalysisResult(BaseModel):
+    session_id: str
+    funds: List[PortfolioFund]
+    total_value: float
+    overlap_matrix: List[OverlapPair]
+    sector_exposure: Dict[str, float]
+    marketcap_breakdown: Dict[str, float]
+    top_stock_concentrations: List[dict]
+    expense_audit: ExpenseAudit
+    health_score: int  # 0-100
+    health_explanation: str  # LLM generated
+    red_flags: List[str]
+    created_at: datetime
 
-CODING RULES:
-- All database operations must be async (use async/await throughout)
-- All external HTTP calls must use httpx AsyncClient, not requests
-- Never use synchronous database operations
-- Use Pydantic v2 models for all request/response shapes
-- Use Python type hints everywhere
-- No hardcoded values — everything configurable via env vars
-- Handle HTTP errors gracefully (fund data APIs can be unreliable)
-- Log errors but don't crash on non-critical failures (e.g., one fund fails to parse)
-- Every function must have a docstring
+class ExpenseAudit(BaseModel):
+    total_weighted_expense_ratio: float
+    regular_plan_funds: List[str]
+    potential_savings_yearly: float
+    benchmark_expense_ratio: float  # industry avg for this category mix
 
-API CONTRACTS:
-GET /api/funds/search?q=parag+parikh&limit=5
-Response:
+TASK 3: Health Scorer
+
+Create: backend/services/health_scorer.py
+
+The health score is calculated from these weighted components:
+
+1. OVERLAP SCORE (30% weight): 
+   - Score 100 if max pairwise overlap < 10%
+   - Score 70 if max overlap 10-20%
+   - Score 40 if max overlap 20-35%
+   - Score 10 if max overlap > 35%
+
+2. EXPENSE RATIO SCORE (20% weight):
+   - Score 100 if weighted expense ratio < 0.5%
+   - Score 80 if 0.5–0.8%
+   - Score 60 if 0.8–1.2%
+   - Score 30 if 1.2–1.8%
+   - Score 0 if > 1.8%
+
+3. DIRECT PLAN SCORE (15% weight):
+   - Score 100 if all funds are Direct plans
+   - Deduct 20 points per Regular plan fund
+
+4. CONCENTRATION SCORE (20% weight):
+   - Score 100 if no single stock > 5% of total portfolio
+   - Score 70 if any stock 5–8%
+   - Score 40 if any stock 8–12%
+   - Score 0 if any stock > 12%
+
+5. SECTOR CONCENTRATION SCORE (15% weight):
+   - Score 100 if no sector > 30% of portfolio
+   - Score 70 if any sector 30–40%
+   - Score 30 if any sector > 40%
+
+Return: overall score (0–100) and per-component breakdown.
+
+Also generate red_flags (list of strings) — critical issues:
+- "⚠️ 2 of your funds are Regular plans — costing you ₹X extra per year"
+- "⚠️ Reliance Industries comprises 8.4% of your total portfolio — high single-stock risk"
+- "⚠️ HDFC Flexi Cap and Mirae Asset Large Cap have 34% overlap — consider removing one"
+- "⚠️ Your IT sector exposure is 42% — above recommended 30% threshold"
+
+TASK 4: LLM Explainer
+
+Create: backend/services/llm_explainer.py
+
+Use Google Gemini 1.5 Flash API (free tier).
+
+class LLMExplainer:
+    
+    async def generate_portfolio_summary(
+        self, 
+        analysis: AnalysisResult
+    ) -> str:
+        """
+        Generate a 3-4 sentence plain English summary of the portfolio health.
+        
+        PROMPT TEMPLATE TO USE:
+        You are a friendly financial educator (not an advisor) explaining a mutual fund 
+        portfolio analysis to a retail investor in India. 
+        
+        Portfolio data:
+        - Total value: ₹{total_value:,}
+        - Number of funds: {num_funds}
+        - Health score: {health_score}/100
+        - Worst overlap pair: {worst_overlap_pair} at {overlap_score}% overlap
+        - Weighted expense ratio: {expense_ratio}%
+        - Regular plan funds (costing extra): {regular_plan_count}
+        - Top sector: {top_sector} at {top_sector_pct}%
+        - Red flags: {red_flags}
+        
+        Write a 3-4 sentence explanation that:
+        1. States the overall health of the portfolio in simple terms
+        2. Highlights the most important issue to fix
+        3. Mentions one specific positive (if any)
+        4. Ends with one actionable step (educational, not advice)
+        
+        Rules:
+        - Do NOT say "you should invest" or "I recommend"
+        - Use simple language — assume the reader knows basic investing but not advanced concepts
+        - Be honest but not alarmist
+        - Mention specific fund names and numbers
+        - Keep it under 100 words
+        - End with: "(This is educational information, not financial advice)"
+        """
+        
+IMPORTANT: Cache the LLM response for identical analysis inputs (hash the key inputs, 
+cache for 24 hours). Gemini free tier has limits.
+
+TASK 5: Portfolio Router
+
+Create: backend/routers/portfolio.py
+
+POST /api/portfolio/analyze
+Request body:
 {
-  "results": [
-    {
-      "scheme_code": "125497",
-      "scheme_name": "Parag Parikh Flexi Cap Fund - Direct Plan - Growth",
-      "amc_name": "PPFAS Mutual Fund",
-      "nav": 82.45,
-      "plan_type": "Direct",
-      "category": "Flexi Cap",
-      "nav_date": "2025-05-15"
-    }
-  ],
-  "total": 1,
-  "query": "parag parikh"
+  "funds": [
+    {"name": "Parag Parikh Flexi Cap", "units": 150.5},
+    {"name": "Mirae Asset Large Cap", "units": 80.0},
+    {"name": "HDFC Mid Cap", "units": 200.0}
+  ]
 }
 
-GET /health
-Response: {"status": "ok", "version": "0.1.0", "db": "connected"}
+Process:
+1. Resolve each fund name to a scheme_code (use fund_resolver service)
+2. Fetch current NAV for each fund
+3. Calculate current value = units × NAV
+4. Fetch holdings for each fund from DB (with Redis cache)
+5. Run OverlapEngine.compute_overlap()
+6. Run OverlapEngine.compute_sector_exposure()
+7. Run OverlapEngine.compute_stock_concentration()
+8. Run OverlapEngine.compute_marketcap_breakdown()
+9. Calculate expense audit
+10. Run HealthScorer.calculate()
+11. Run LLMExplainer.generate_portfolio_summary()
+12. Save to analysis_sessions table
+13. Return full AnalysisResult with session_id
 
-ERROR HANDLING:
-- 404 for fund not found
-- 422 for validation errors (Pydantic handles this automatically)
-- 500 with {"error": "internal_server_error", "detail": "..."} for unexpected errors
-- Never expose stack traces in production
-- Use FastAPI's exception handlers
+Response: AnalysisResult schema
 
-SECURITY NOTES:
-- Add rate limiting: max 30 requests/minute per IP on search endpoint
-- Sanitize all query parameters (Pydantic handles this)
-- Never log raw user input
-- Set proper CORS headers
+GET /api/portfolio/report/{session_id}
+- Fetch analysis from DB by session_id
+- Return same AnalysisResult
+- This enables shareable report links
 
-ENVIRONMENT VARIABLES (.env.example):
-DATABASE_URL=postgresql+asyncpg://user:password@host:port/dbname
-REDIS_URL=rediss://user:password@host:port
-GEMINI_API_KEY=
+PART B — FRONTEND
+
+Create a Next.js 14 application in the frontend/ folder.
+
+SETUP:
+npx create-next-app@latest frontend --typescript --tailwind --app --src-dir=false
+
+ADDITIONAL PACKAGES:
+npm install recharts @radix-ui/react-progress lucide-react axios
+npm install -D @types/node
+
+PAGES TO BUILD:
+
+1. app/page.tsx — Landing Page
+A clean, professional landing page with:
+- Header: "PortfolioX" logo + "Analyze" button
+- Hero section with headline: "See what's actually inside your mutual fund portfolio"
+- Subheadline: "Discover hidden overlap, true sector exposure, and exact tax liability — in 30 seconds"
+- Three feature cards: "Overlap Detection", "Expense Audit", "Health Score"
+- A "How it works" section: 3 steps (Enter funds → We analyze → Get your report)
+- Statistics row: "20,000+ funds analyzed", "40+ metrics", "Free to use"
+- CTA button: "Analyze My Portfolio"
+- Footer: "Not SEBI-registered financial advice. Educational tool only."
+
+Design guidelines:
+- Color scheme: Dark navy (#0f172a) background with emerald green (#10b981) accents
+- Clean, professional, fintech-grade
+- No clutter — this is a serious tool, not a consumer app
+- Mobile responsive
+
+2. app/analyze/page.tsx — Main Analysis Tool
+This is the core page.
+
+Step 1 UI: Fund Input
+- A search input with typeahead: user types fund name → shows autocomplete dropdown
+- Each result in dropdown shows: fund name, AMC, Direct/Regular, NAV
+- When selected, adds to a "Your Portfolio" list below
+- For each added fund: show fund name + input for units
+- "Add Another Fund" button
+- "Analyze Portfolio" button (disabled until at least 2 funds added)
+- Minimum 2 funds, maximum 15 funds
+
+Step 2 UI: Loading State
+- Progress indicator while analysis runs
+- Messages: "Fetching fund holdings...", "Computing overlap...", "Generating insights..."
+
+Step 3 UI: Results Dashboard
+Layout: 2-column grid on desktop, single column on mobile
+
+LEFT COLUMN:
+- Health Score: Large circular gauge (0-100), color coded (red/yellow/green)
+- Red Flags: List of warning cards in red/orange
+- LLM Summary: Card with AI-generated explanation
+
+RIGHT COLUMN (tabs):
+Tab 1 "Overlap"
+- Overlap matrix: table showing each fund pair and their overlap %
+- Color-coded cells: red > 30%, yellow 15-30%, green < 15%
+- Below matrix: list of stocks appearing in multiple funds
+
+Tab 2 "Sectors"
+- Pie chart of sector breakdown
+- Bar chart of market cap breakdown (Large/Mid/Small/Debt)
+- Highlight if any sector > 30%
+
+Tab 3 "Costs"
+- Table: each fund with its expense ratio, Direct/Regular status
+- Summary: weighted average expense ratio
+- If any Regular plans: "You could save ₹X/year by switching to Direct"
+
+Tab 4 "Top Stocks"
+- Table: top 15 stocks by total portfolio exposure
+- Columns: Stock name, Sector, % of portfolio, Appears in N funds
+
+BOTTOM BAR:
+- "Share Report" button → copies shareable URL to clipboard
+- "Download PDF" button (Phase 2 feature, show as disabled for now)
+
+3. app/report/[sessionId]/page.tsx — Shareable Report
+- Static view of a saved analysis
+- Same layout as results but read-only
+- Shows "Analyzed on [date]" header
+- "Re-analyze with current data" button
+
+COMPONENT STRUCTURE:
+components/
+├── ui/                          # shadcn-style base components
+│   ├── Button.tsx
+│   ├── Card.tsx
+│   ├── Badge.tsx
+│   └── Input.tsx
+├── fund-input/
+│   ├── FundSearchInput.tsx       # Typeahead search component
+│   └── PortfolioBuilder.tsx      # Manages the list of added funds
+├── analytics/
+│   ├── HealthScoreGauge.tsx      # Circular gauge with score
+│   ├── OverlapMatrix.tsx         # Color-coded overlap table
+│   ├── SectorPieChart.tsx        # Recharts PieChart
+│   ├── MarketCapBar.tsx          # Recharts BarChart
+│   ├── ExpenseAuditTable.tsx     # Cost breakdown table
+│   └── RedFlagsList.tsx          # Warning cards
+└── common/
+    ├── Header.tsx
+    └── Footer.tsx
+
+lib/api-client.ts:
+Create typed API functions:
+- searchFunds(query: string): Promise<FundSearchResult[]>
+- analyzPortfolio(funds: FundInput[]): Promise<AnalysisResult>
+- getReport(sessionId: string): Promise<AnalysisResult>
+
+lib/types.ts:
+Mirror the backend Pydantic schemas as TypeScript interfaces.
+
+hooks/usePortfolioAnalysis.ts:
+Custom hook that manages:
+- Input state (list of funds)
+- Loading state
+- Analysis result state
+- Error state
+- The analyzePortfolio() function call
+
+STATE MANAGEMENT:
+No Redux/Zustand needed for Phase 1 — React useState + useReducer is sufficient.
+The portfolio input state and analysis result fit cleanly in a single page component.
+
+API CONTRACTS (Frontend calling Backend):
+Frontend base URL: from env NEXT_PUBLIC_API_URL
+
+All API calls go through lib/api-client.ts, never directly from components.
+
+ENVIRONMENT VARIABLES:
+Frontend .env.local:
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+Backend .env:
+DATABASE_URL=...
+REDIS_URL=...
+GEMINI_API_KEY=...
 ENVIRONMENT=development
 
-TESTING:
-After setup, verify:
-1. uvicorn main:app --reload starts without errors
-2. GET /health returns 200
-3. python data/scripts/load_amfi_schemes.py runs and loads ~20,000 funds
-4. GET /api/funds/search?q=hdfc returns relevant results
-5. GET /api/funds/search?q=a returns 422 (too short)
+ERROR HANDLING:
+- If fund not found: show inline error "Fund not found — try a different name"
+- If analysis fails: show "Analysis failed — please try again" with retry button
+- If holdings data not available: show "Holdings data not available for this fund" and exclude from overlap (but still include in sector/cost analysis)
+- Network errors: toast notification
 
-DEPLOYMENT (for later, just set up the config):
-- Add a Procfile: web: uvicorn main:app --host 0.0.0.0 --port $PORT
-- Add railway.json with build configuration
-- All secrets in Railway environment variables
+TESTING:
+Backend:
+- Test overlap_engine.py with 3 hardcoded funds (use pytest)
+- Test health_scorer.py with known inputs and expected outputs
+- Test /api/portfolio/analyze with httpx TestClient
+
+Frontend:
+- Manual testing: add 3–5 funds, verify analysis completes
+- Test shareable link: analyze → copy link → open in incognito → verify report loads
+
+DEPLOYMENT:
+Backend → Railway:
+- Set all env vars in Railway dashboard
+- Procfile: web: uvicorn main:app --host 0.0.0.0 --port $PORT
+
+Frontend → Vercel:
+- Set NEXT_PUBLIC_API_URL to Railway backend URL
+- Deploy from GitHub
 
 EXPECTED OUTPUT:
-A running FastAPI server that can:
-1. Search 20,000+ Indian mutual funds by name
-2. Return fund metadata
-3. Cache results in Redis
-4. Connect to PostgreSQL cleanly
+A live, deployed web application where a user can:
+1. Search and select Indian mutual funds by name
+2. Enter their units for each fund
+3. Click "Analyze"
+4. See a complete portfolio health report in under 10 seconds
+5. Share the report via a link
 
-This is the data foundation that all future phases depend on.
-DO NOT add any analysis logic yet. Just the data layer.
+This is your MVP. This is what you demo in interviews.
