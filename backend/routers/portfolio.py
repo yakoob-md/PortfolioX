@@ -6,6 +6,7 @@ import io
 import httpx
 import pandas as pd
 from datetime import datetime
+import logging
 
 from db.database import get_db
 from db.repositories.fund_repo import FundRepository

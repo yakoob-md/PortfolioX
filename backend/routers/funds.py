@@ -14,7 +14,7 @@ router = APIRouter(prefix="/funds", tags=["funds"])
 @router.get("/search", response_model=FundSearchResponse)
 async def search_funds(
     request: Request,
-    q: str = Query(..., min_length=2, description="Search query for mutual funds"),
+    q: Optional[str] = Query(None, description="Search query for mutual funds"),
     limit: int = Query(10, ge=1, le=50),
     db: AsyncSession = Depends(get_db)
 ):
@@ -31,6 +31,7 @@ async def search_funds(
             detail="Rate limit exceeded. Try again in a minute."
         )
     
+    q = q or ""
     cache_key = f"search:{q}:{limit}"
     
     # Try cache first
