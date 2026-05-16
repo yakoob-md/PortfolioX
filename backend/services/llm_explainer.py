@@ -1,4 +1,4 @@
-import google.generativeai as genai
+from google import genai
 from config import settings
 from models.schemas import AnalysisResult
 import logging
@@ -7,22 +7,22 @@ logger = logging.getLogger(__name__)
 
 class LLMExplainer:
     """
-    Service to generate plain-English summaries of portfolio analysis using Gemini 1.5 Flash.
+    Service to generate plain-English summaries of portfolio analysis using Gemini.
     """
 
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
         if self.api_key:
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.client = genai.Client(api_key=self.api_key)
+            self.model_name = 'gemini-2.5-flash'
         else:
-            self.model = None
+            self.client = None
 
     async def generate_portfolio_summary(self, analysis: AnalysisResult) -> str:
         """
         Generates a 3-4 sentence summary of portfolio health.
         """
-        if not self.model:
+        if not self.client:
             return "AI explanation unavailable. Please provide a GEMINI_API_KEY."
 
         # Prepare summary data
@@ -67,7 +67,10 @@ class LLMExplainer:
         """
 
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
             return response.text.strip()
         except Exception as e:
             logger.error(f"Gemini API error: {e}")
