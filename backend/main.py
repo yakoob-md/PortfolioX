@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import settings
 from db.database import engine
-from routers import funds
+from routers import funds, portfolio
 from models.schemas import HealthResponse
 
 # Configure logging
@@ -71,6 +71,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Routers
 app.include_router(funds.router, prefix="/api")
+app.include_router(portfolio.router, prefix="/api")
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():

@@ -1,6 +1,6 @@
-from sqlalchemy import String, Text, Numeric, Date, Boolean, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy import String, Text, Numeric, Date, Boolean, DateTime, ForeignKey, UniqueConstraint, func, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.sql import func
 from datetime import date, datetime
 from typing import List, Optional
 from .database import Base
@@ -51,3 +51,16 @@ class FundHolding(Base):
     __table_args__ = (
         UniqueConstraint("scheme_code", "disclosure_date", "stock_isin", name="uq_fund_holding"),
     )
+
+class AnalysisSession(Base):
+    """
+    User analysis sessions for storing and sharing reports.
+    """
+    __tablename__ = "analysis_sessions"
+
+    session_id: Mapped[str] = mapped_column(Text, primary_key=True, server_default=text("gen_random_uuid()::text"))
+    input_data: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    analysis_result: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    health_score: Mapped[Optional[int]] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now() + interval '7 days'"))

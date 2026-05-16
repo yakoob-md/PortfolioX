@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func, text
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
-from ..models import Fund
+from ..models import Fund, FundHolding, AnalysisSession
 
 class FundRepository:
     """
@@ -58,3 +58,26 @@ class FundRepository:
         stmt = select(Fund.amc_name).distinct().order_by(Fund.amc_name)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_fund_holdings(self, scheme_codes: List[str]) -> List[FundHolding]:
+        """Get all holdings for a list of funds."""
+        stmt = select(FundHolding).where(FundHolding.scheme_code.in_(scheme_codes))
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def create_analysis_session(self, input_data: dict, analysis_result: dict, health_score: int) -> str:
+        """Saves analysis session and returns session_id."""
+        session = AnalysisSession(
+            input_data=input_data,
+            analysis_result=analysis_result,
+            health_score=health_score
+        )
+        self.db.add(session)
+        await self.db.flush() # To get the auto-generated session_id
+        return session.session_id
+
+    async def get_analysis_session(self, session_id: str) -> Optional[AnalysisSession]:
+        """Retrieve analysis session by ID."""
+        stmt = select(AnalysisSession).where(AnalysisSession.session_id == session_id)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
