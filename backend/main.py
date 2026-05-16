@@ -69,7 +69,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Routers
 app.include_router(funds.router, prefix="/api")
 app.include_router(portfolio.router, prefix="/api")
-app.include_router(tax.router)
+app.include_router(tax.router, prefix="/api")
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():

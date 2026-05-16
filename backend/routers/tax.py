@@ -12,7 +12,7 @@ from models.tax_schemas import Folio
 import json
 import logging
 
-router = APIRouter(prefix="/api/tax", tags=["tax"])
+router = APIRouter(prefix="/tax", tags=["tax"])
 logger = logging.getLogger(__name__)
 
 @router.post("/upload")
@@ -23,15 +23,15 @@ async def upload_cams_pdf(file: UploadFile = File(...), db: AsyncSession = Depen
         if not content.startswith(b'%PDF-'):
             raise HTTPException(status_code=400, detail="Not a valid PDF file.")
         
-        # Reset pointer for subsequent reads
-        await file.seek(0)
+        # Check size
+        if len(content) > 10 * 1024 * 1024: # 10MB limit
+            raise HTTPException(status_code=400, detail="File too large. Limit is 10MB.")
+            
+        # Reset pointer for subsequent reads (if needed, but we already have content)
+        # However, it's safer to just write the content we have.
         
-    try:
         # Save to temp file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
-            content = await file.read()
-            if len(content) > 10 * 1024 * 1024: # 10MB limit
-                raise HTTPException(status_code=400, detail="File too large. Limit is 10MB.")
             temp_pdf.write(content)
             temp_pdf_path = temp_pdf.name
             
