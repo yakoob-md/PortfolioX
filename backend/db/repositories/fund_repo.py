@@ -29,8 +29,8 @@ class FundRepository:
                 Fund.is_active == True
             )
             .order_by(
-                # Case-insensitive exact match priority
-                func.lower(Fund.scheme_name) == query.lower(),
+                # Case-insensitive exact match priority (True=1 comes first with desc)
+                (func.lower(Fund.scheme_name) == query.lower()).desc(),
                 # Partial match priority (starts with)
                 Fund.scheme_name.ilike(f"{query}%").desc(),
                 Fund.scheme_name
@@ -60,8 +60,32 @@ class FundRepository:
         return list(result.scalars().all())
 
     async def get_fund_holdings(self, scheme_codes: List[str]) -> List[FundHolding]:
-        """Get all holdings for a list of funds."""
-        stmt = select(FundHolding).where(FundHolding.scheme_code.in_(scheme_codes))
+        """Get the most recent holdings for each individual fund in the list."""
+        # Multi-column subquery to find the latest disclosure date PER fund
+        # This handles cases where different funds have different latest disclosure dates
+        sub_stmt = (
+            select(FundHolding.scheme_code, func.max(FundHolding.disclosure_date))
+            .where(FundHolding.scheme_code.in_(scheme_codes))
+            .group_by(FundHolding.scheme_code)
+        )
+        
+        sub_results = await self.db.execute(sub_stmt)
+        latest_dates = sub_results.all()
+        
+        if not latest_dates:
+            return []
+
+        # Build conditions for each fund-date pair
+        from sqlalchemy import tuple_
+        stmt = (
+            select(FundHolding)
+            .where(
+                tuple_(FundHolding.scheme_code, FundHolding.disclosure_date).in_(
+                    [tuple_(code, dt) for code, dt in latest_dates]
+                )
+            )
+        )
+        
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 

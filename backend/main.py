@@ -47,14 +47,11 @@ app = FastAPI(
 )
 
 # CORS Middleware
-origins = [
-    "http://localhost:3000",
-    "https://portfoliox.vercel.app", # Placeholder for prod
-]
+origins = settings.CORS_ORIGINS.split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins if settings.ENVIRONMENT == "development" else ["*"], # Update for prod
+    allow_origins=origins if settings.ENVIRONMENT == "production" else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

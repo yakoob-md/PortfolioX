@@ -17,8 +17,14 @@ logger = logging.getLogger(__name__)
 
 @router.post("/upload")
 async def upload_cams_pdf(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
-    if file.content_type != "application/pdf":
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    try:
+        # Validate magic bytes first
+        content = await file.read()
+        if not content.startswith(b'%PDF-'):
+            raise HTTPException(status_code=400, detail="Not a valid PDF file.")
+        
+        # Reset pointer for subsequent reads
+        await file.seek(0)
         
     try:
         # Save to temp file
