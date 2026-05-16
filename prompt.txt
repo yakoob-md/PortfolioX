@@ -1,472 +1,227 @@
-PHASE 1 — Portfolio Overlap Detector (The Core MVP)
-Duration: 10–14 days | Difficulty: Medium
-Goal: User enters 3–5 fund names + units → system returns overlap matrix + sector breakdown + expense audit + health score + 1-paragraph LLM explanation.
-Output: A working, deployable tool that does something NO free tool currently does cleanly.
-Demo: "I put in my 7 funds. It told me Parag Parikh and Mirae Asset Large Cap share 14 of their top 20 stocks. I had no idea."
-Why this phase matters: This is the resume centrepiece. Every other phase builds on this. This is what you show in interviews.
-Do NOT add yet: Auth, PDF upload, tax calculation, chatbot.
-Resume value: ⭐⭐⭐⭐⭐ — this alone is interview-worthy.
-
-core mvp
-
 OBJECTIVE:
-Build the core MVP feature of PortfolioX: the Portfolio Overlap Detector.
-User inputs a list of mutual funds with units → system returns a complete 
-portfolio analysis including overlap matrix, sector exposure, expense audit, 
-and health score with AI explanation.
+Build the Tax Mitra module for PortfolioX — an Indian mutual fund capital 
+gains tax calculator that parses CAMS Consolidated Account Statement PDFs 
+and calculates exact STCG/LTCG liability with tax-saving suggestions.
 
 PROJECT CONTEXT:
-- Phase 0 is complete: FastAPI backend running, 20,000+ funds in PostgreSQL
-- This phase adds: holdings data, overlap engine, health scorer, LLM explainer
-- Frontend (Next.js) also gets built in this phase
-- Target: fully deployable product that solves a real problem
+- Phase 0 and Phase 1 are complete
+- PortfolioX backend and frontend are running
+- This phase adds a new module: Tax Mitra
+- New route in frontend: /tax
+- New backend router: /api/tax
+- PDF upload capability is added
 
-PART A — BACKEND ADDITIONS
+TAX RULES TO IMPLEMENT (India, post-2024 Budget):
+Equity Mutual Funds:
+- STCG (Short Term Capital Gains): holding period < 12 months → taxed at 20%
+- LTCG (Long Term Capital Gains): holding period ≥ 12 months
+  → first ₹1,25,000 per financial year: EXEMPT
+  → above ₹1,25,000: taxed at 12.5%
 
-NEW DEPENDENCIES TO ADD:
-numpy==1.26.4
-pandas==2.2.1
-google-generativeai==0.5.0
+Debt Mutual Funds (post April 2023):
+- Gains taxed as per income tax slab (added to income) regardless of holding period
 
-TASK 1: Data Ingestion — Fund Holdings
+ELSS Funds:
+- Lock-in 3 years
+- Qualifies for 80C deduction (up to ₹1.5L)
+- LTCG rules apply after 3 years
 
-Create: backend/jobs/sync_holdings.py
+FIFO (First In, First Out) Rule:
+When units are redeemed, the oldest units are considered sold first.
+This is mandatory per Indian tax law.
 
-This script fetches mutual fund holdings from AMFI monthly portfolio disclosures.
+NEW DEPENDENCIES:
+pdfplumber==0.10.3
+pypdf==4.1.0  (fallback)
 
-AMFI publishes portfolio disclosures at:
-https://www.amfiindia.com/research-information/other-data/scheme-portfolio
+TASK 1: CAMS PDF Parser
 
-The data is in CSV/text format per AMC, published by the 10th of every month 
-for the previous month.
+Create: backend/services/pdf_parser.py
 
-ALTERNATIVE (use this for MVP — faster): 
-Use the mfapi.in API which provides NAV history.
-For holdings, AMFI publishes them in a structured format.
+CAMS Consolidated Account Statement format:
+- Issued by CAMS (Computer Age Management Services)
+- Contains: investor name, PAN, folio number, scheme name, transaction history
+- Each transaction: date, description (Purchase/Redemption/Dividend), units, NAV, amount
 
-For the MVP, use a simpler approach:
-1. Fetch the AMFI portfolio disclosure text for the most recent month
-2. It's a large text file with this approximate format:
-   Fund Name: HDFC Equity Fund
-   Portfolio as on: 31-Mar-2025
-   Company Name | ISIN | Industry | Quantity | Market Value (Rs. Lakhs) | % to NAV
-   
-3. Parse this into fund_holdings table entries
-4. Store with disclosure_date
+Transaction types to detect:
+- Purchase (SIP/Lumpsum) → adds units with cost
+- Redemption → removes units (triggers FIFO)
+- Dividend Reinvestment → adds units
+- Bonus → adds units at zero cost
+- Switch In/Out → treat as redemption (out) + purchase (in)
 
-NOTE: AMFI portfolio disclosures can be inconsistent in format.
-Build the parser to be fault-tolerant — skip lines that don't parse, 
-log the errors, continue processing.
-
-Also create a MANUAL HOLDINGS SEEDER for testing:
-Create a Python script that seeds test holdings for 10 popular funds 
-(HDFC Equity, Parag Parikh Flexi Cap, Mirae Asset Large Cap, SBI Bluechip, 
-Axis Flexi Cap, Kotak Flexi Cap, ICICI Pru Bluechip, DSP Tax Saver, 
-Nippon India Growth, Franklin India Prima)
-
-For each fund, insert at least the top 20 holdings (look up real current 
-holdings from Value Research / AMFI website and hardcode for now — 
-this is acceptable for MVP).
-
-This gives you REAL data to test overlap with immediately.
-
-TASK 2: Overlap Engine
-
-Create: backend/services/overlap_engine.py
-
-class OverlapEngine:
+class CAMSParser:
     
-    def compute_overlap(
-        self, 
-        fund_holdings: Dict[str, List[Holding]]  # scheme_code → holdings list
-    ) -> OverlapResult:
+    def parse(self, pdf_path: str) -> ParsedStatement:
         """
-        Core logic:
-        1. For each pair of funds (A, B), find common stocks
-        2. Calculate overlap % = sum of min(% in A, % in B) for each common stock
-        3. Return pairwise overlap matrix
+        Returns:
+        - investor_info: {name, pan (masked), email}
+        - folios: list of Folio objects
         
-        Example:
-        Fund A holds Reliance at 8%, Infosys at 6%
-        Fund B holds Reliance at 5%, TCS at 7%
-        Common stocks: Reliance
-        Overlap score = min(8, 5) = 5%
-        """
-    
-    def compute_sector_exposure(
-        self,
-        fund_holdings: Dict[str, List[Holding]],
-        weights: Dict[str, float]  # scheme_code → allocation weight (0-1)
-    ) -> Dict[str, float]:
-        """
-        Aggregate sector exposure across all funds weighted by allocation.
-        Returns: {"IT": 28.5, "Banking": 22.1, "FMCG": 15.3, ...}
-        """
-    
-    def compute_stock_concentration(
-        self,
-        fund_holdings: Dict[str, List[Holding]],
-        weights: Dict[str, float]
-    ) -> List[StockExposure]:
-        """
-        For each stock, calculate total portfolio exposure across all funds.
-        Returns sorted list: [{"stock": "Reliance", "exposure": 4.2, "funds": ["HDFC", "Parag Parikh"]}, ...]
-        """
-    
-    def compute_marketcap_breakdown(
-        self,
-        fund_holdings: Dict[str, List[Holding]],
-        weights: Dict[str, float]
-    ) -> Dict[str, float]:
-        """
-        Returns: {"Large Cap": 65.2, "Mid Cap": 22.1, "Small Cap": 8.4, "Debt/Cash": 4.3}
-        Classify stocks by market cap using NSE classification or AUM-based heuristic.
+        Folio:
+        - scheme_name: str
+        - scheme_code: str (look up from DB)
+        - folio_number: str
+        - current_units: float
+        - transactions: List[Transaction]
+        
+        Transaction:
+        - date: date
+        - transaction_type: Literal['purchase', 'redemption', 'dividend', 'bonus', 'switch_in', 'switch_out']
+        - units: float
+        - nav: float
+        - amount: float
         """
 
-Data models for this service (in schemas.py):
+IMPORTANT PARSING NOTES:
+- CAMS PDFs can have multiple formats depending on the year
+- Use pdfplumber to extract text page by page
+- Look for patterns like:
+  - "HDFC BANK LIMITED" followed by fund entries → AMC section
+  - Lines with dates in format "DD-Mon-YYYY" are transactions
+  - "Purchase" and "Redemption" keywords identify transaction type
+- Build format-detection: identify PDF version by looking for known header patterns
+- Be fault-tolerant: if one folio fails to parse, continue with others
 
-class Holding(BaseModel):
-    stock_isin: str | None
-    stock_name: str
-    sector: str | None
-    holding_percentage: float
-    asset_type: str  # Equity/Debt/Cash
+TASK 2: FIFO Engine
 
-class PortfolioFund(BaseModel):
-    scheme_code: str
+Create: backend/services/tax_engine.py
+
+class TaxEngine:
+    
+    def calculate_gains(self, folios: List[Folio]) -> TaxCalculation:
+        """
+        For each folio:
+        1. Build a purchase queue (FIFO) from all purchase transactions
+        2. For each redemption:
+           a. Pop from the front of the purchase queue
+           b. Calculate holding period (redemption date - purchase date)
+           c. If equity fund and holding < 12 months: STCG
+           d. If equity fund and holding >= 12 months: LTCG
+           e. Calculate gain = (redemption NAV - purchase NAV) * units
+        3. Aggregate: total STCG, total LTCG
+        4. Apply exemptions:
+           - LTCG: ₹1,25,000 exemption per year
+        5. Calculate tax:
+           - STCG tax = STCG amount × 20%
+           - LTCG tax = max(0, LTCG - 125000) × 12.5%
+        """
+    
+    def calculate_tax_loss_harvesting(
+        self, 
+        folios: List[Folio],
+        current_navs: Dict[str, float]
+    ) -> List[HarvestingOpportunity]:
+        """
+        For each holding with unrealized losses:
+        - If current NAV < purchase NAV → unrealized loss
+        - If redeeming now would save taxes → flag it
+        - Calculate: if you redeem X units at loss → offset Y in STCG gains → save Z in tax
+        """
+    
+    def calculate_ltcg_optimization(
+        self,
+        folios: List[Folio]
+    ) -> LTCGOptimization:
+        """
+        Check remaining LTCG exemption for the year (₹1.25L).
+        Suggest: "You can realize ₹X more in LTCG this year tax-free.
+        Consider redeeming some units in [specific fund] to utilize this."
+        """
+
+Tax calculation models:
+class GainEntry(BaseModel):
     scheme_name: str
+    purchase_date: date
+    redemption_date: date
+    holding_days: int
+    gain_type: Literal['STCG', 'LTCG']
+    purchase_nav: float
+    redemption_nav: float
     units: float
-    nav: float
-    current_value: float
-    expense_ratio: float | None
-    plan_type: str  # Direct/Regular
+    gain_amount: float
+    tax_applicable: float
 
-class OverlapPair(BaseModel):
-    fund_a_code: str
-    fund_a_name: str
-    fund_b_code: str
-    fund_b_name: str
-    overlap_score: float  # 0-100
-    common_stocks: List[str]
-    common_stock_count: int
+class TaxCalculation(BaseModel):
+    financial_year: str  # e.g., "2024-25"
+    total_stcg: float
+    total_ltcg: float
+    ltcg_exempt: float   # min(total_ltcg, 125000)
+    ltcg_taxable: float  # max(0, total_ltcg - 125000)
+    stcg_tax: float      # total_stcg * 0.20
+    ltcg_tax: float      # ltcg_taxable * 0.125
+    total_tax: float
+    gain_entries: List[GainEntry]
+    harvesting_opportunities: List[HarvestingOpportunity]
+    ltcg_optimization: LTCGOptimization
 
-class AnalysisResult(BaseModel):
-    session_id: str
-    funds: List[PortfolioFund]
-    total_value: float
-    overlap_matrix: List[OverlapPair]
-    sector_exposure: Dict[str, float]
-    marketcap_breakdown: Dict[str, float]
-    top_stock_concentrations: List[dict]
-    expense_audit: ExpenseAudit
-    health_score: int  # 0-100
-    health_explanation: str  # LLM generated
-    red_flags: List[str]
-    created_at: datetime
+TASK 3: Tax API Endpoints
 
-class ExpenseAudit(BaseModel):
-    total_weighted_expense_ratio: float
-    regular_plan_funds: List[str]
-    potential_savings_yearly: float
-    benchmark_expense_ratio: float  # industry avg for this category mix
+POST /api/tax/upload
+- Accepts multipart/form-data with PDF file
+- Max file size: 10MB
+- Process: parse PDF → calculate gains → return TaxCalculation
+- Store parsed data in session (not permanently — privacy)
+- Return: TaxCalculation + session_id for shareable link
 
-TASK 3: Health Scorer
+POST /api/tax/manual
+- For users who don't want to upload PDF
+- Accepts manual transaction entries
+- Same calculation logic as PDF upload
 
-Create: backend/services/health_scorer.py
+GET /api/tax/report/{session_id}
+- Return stored tax calculation
+- Expires after 24 hours
 
-The health score is calculated from these weighted components:
+SECURITY FOR PDF UPLOAD:
+- Validate file is actually a PDF (check magic bytes, not just extension)
+- Process in memory — do NOT write to disk permanently
+- Delete temp file immediately after parsing
+- Never log file contents
+- Add file size limit: 10MB max
 
-1. OVERLAP SCORE (30% weight): 
-   - Score 100 if max pairwise overlap < 10%
-   - Score 70 if max overlap 10-20%
-   - Score 40 if max overlap 20-35%
-   - Score 10 if max overlap > 35%
+TASK 4: Frontend — Tax Mitra Page
 
-2. EXPENSE RATIO SCORE (20% weight):
-   - Score 100 if weighted expense ratio < 0.5%
-   - Score 80 if 0.5–0.8%
-   - Score 60 if 0.8–1.2%
-   - Score 30 if 1.2–1.8%
-   - Score 0 if > 1.8%
+Create: app/tax/page.tsx
 
-3. DIRECT PLAN SCORE (15% weight):
-   - Score 100 if all funds are Direct plans
-   - Deduct 20 points per Regular plan fund
+Step 1: Upload Interface
+- Clean drag-and-drop zone for CAMS PDF upload
+- Alternative: "Enter transactions manually" link
+- Info text: "Your PDF is processed locally and never stored permanently"
+- "How to download CAMS statement" link/tooltip
 
-4. CONCENTRATION SCORE (20% weight):
-   - Score 100 if no single stock > 5% of total portfolio
-   - Score 70 if any stock 5–8%
-   - Score 40 if any stock 8–12%
-   - Score 0 if any stock > 12%
+Step 2: Processing
+- Progress bar with steps: "Reading PDF → Parsing transactions → Calculating gains"
 
-5. SECTOR CONCENTRATION SCORE (15% weight):
-   - Score 100 if no sector > 30% of portfolio
-   - Score 70 if any sector 30–40%
-   - Score 30 if any sector > 40%
+Step 3: Results
+Three panels:
 
-Return: overall score (0–100) and per-component breakdown.
+Panel 1 "Tax Summary" (top, full width):
+- Financial year selector
+- Big number: "Total Tax Liability: ₹X"
+- Breakdown: STCG (₹X at 20%) + LTCG (₹X at 12.5%)
+- Exemption utilized: ₹X of ₹1,25,000
 
-Also generate red_flags (list of strings) — critical issues:
-- "⚠️ 2 of your funds are Regular plans — costing you ₹X extra per year"
-- "⚠️ Reliance Industries comprises 8.4% of your total portfolio — high single-stock risk"
-- "⚠️ HDFC Flexi Cap and Mirae Asset Large Cap have 34% overlap — consider removing one"
-- "⚠️ Your IT sector exposure is 42% — above recommended 30% threshold"
+Panel 2 "Opportunities" (left):
+- Tax-loss harvesting suggestions: "Selling X units of Fund Y saves ₹Z in tax"
+- LTCG exemption left: "You can realize ₹X more LTCG tax-free this year"
+- March 31 deadline countdown (if applicable)
 
-TASK 4: LLM Explainer
-
-Create: backend/services/llm_explainer.py
-
-Use Google Gemini 1.5 Flash API (free tier).
-
-class LLMExplainer:
-    
-    async def generate_portfolio_summary(
-        self, 
-        analysis: AnalysisResult
-    ) -> str:
-        """
-        Generate a 3-4 sentence plain English summary of the portfolio health.
-        
-        PROMPT TEMPLATE TO USE:
-        You are a friendly financial educator (not an advisor) explaining a mutual fund 
-        portfolio analysis to a retail investor in India. 
-        
-        Portfolio data:
-        - Total value: ₹{total_value:,}
-        - Number of funds: {num_funds}
-        - Health score: {health_score}/100
-        - Worst overlap pair: {worst_overlap_pair} at {overlap_score}% overlap
-        - Weighted expense ratio: {expense_ratio}%
-        - Regular plan funds (costing extra): {regular_plan_count}
-        - Top sector: {top_sector} at {top_sector_pct}%
-        - Red flags: {red_flags}
-        
-        Write a 3-4 sentence explanation that:
-        1. States the overall health of the portfolio in simple terms
-        2. Highlights the most important issue to fix
-        3. Mentions one specific positive (if any)
-        4. Ends with one actionable step (educational, not advice)
-        
-        Rules:
-        - Do NOT say "you should invest" or "I recommend"
-        - Use simple language — assume the reader knows basic investing but not advanced concepts
-        - Be honest but not alarmist
-        - Mention specific fund names and numbers
-        - Keep it under 100 words
-        - End with: "(This is educational information, not financial advice)"
-        """
-        
-IMPORTANT: Cache the LLM response for identical analysis inputs (hash the key inputs, 
-cache for 24 hours). Gemini free tier has limits.
-
-TASK 5: Portfolio Router
-
-Create: backend/routers/portfolio.py
-
-POST /api/portfolio/analyze
-Request body:
-{
-  "funds": [
-    {"name": "Parag Parikh Flexi Cap", "units": 150.5},
-    {"name": "Mirae Asset Large Cap", "units": 80.0},
-    {"name": "HDFC Mid Cap", "units": 200.0}
-  ]
-}
-
-Process:
-1. Resolve each fund name to a scheme_code (use fund_resolver service)
-2. Fetch current NAV for each fund
-3. Calculate current value = units × NAV
-4. Fetch holdings for each fund from DB (with Redis cache)
-5. Run OverlapEngine.compute_overlap()
-6. Run OverlapEngine.compute_sector_exposure()
-7. Run OverlapEngine.compute_stock_concentration()
-8. Run OverlapEngine.compute_marketcap_breakdown()
-9. Calculate expense audit
-10. Run HealthScorer.calculate()
-11. Run LLMExplainer.generate_portfolio_summary()
-12. Save to analysis_sessions table
-13. Return full AnalysisResult with session_id
-
-Response: AnalysisResult schema
-
-GET /api/portfolio/report/{session_id}
-- Fetch analysis from DB by session_id
-- Return same AnalysisResult
-- This enables shareable report links
-
-PART B — FRONTEND
-
-Create a Next.js 14 application in the frontend/ folder.
-
-SETUP:
-npx create-next-app@latest frontend --typescript --tailwind --app --src-dir=false
-
-ADDITIONAL PACKAGES:
-npm install recharts @radix-ui/react-progress lucide-react axios
-npm install -D @types/node
-
-PAGES TO BUILD:
-
-1. app/page.tsx — Landing Page
-A clean, professional landing page with:
-- Header: "PortfolioX" logo + "Analyze" button
-- Hero section with headline: "See what's actually inside your mutual fund portfolio"
-- Subheadline: "Discover hidden overlap, true sector exposure, and exact tax liability — in 30 seconds"
-- Three feature cards: "Overlap Detection", "Expense Audit", "Health Score"
-- A "How it works" section: 3 steps (Enter funds → We analyze → Get your report)
-- Statistics row: "20,000+ funds analyzed", "40+ metrics", "Free to use"
-- CTA button: "Analyze My Portfolio"
-- Footer: "Not SEBI-registered financial advice. Educational tool only."
-
-Design guidelines:
-- Color scheme: Dark navy (#0f172a) background with emerald green (#10b981) accents
-- Clean, professional, fintech-grade
-- No clutter — this is a serious tool, not a consumer app
-- Mobile responsive
-
-2. app/analyze/page.tsx — Main Analysis Tool
-This is the core page.
-
-Step 1 UI: Fund Input
-- A search input with typeahead: user types fund name → shows autocomplete dropdown
-- Each result in dropdown shows: fund name, AMC, Direct/Regular, NAV
-- When selected, adds to a "Your Portfolio" list below
-- For each added fund: show fund name + input for units
-- "Add Another Fund" button
-- "Analyze Portfolio" button (disabled until at least 2 funds added)
-- Minimum 2 funds, maximum 15 funds
-
-Step 2 UI: Loading State
-- Progress indicator while analysis runs
-- Messages: "Fetching fund holdings...", "Computing overlap...", "Generating insights..."
-
-Step 3 UI: Results Dashboard
-Layout: 2-column grid on desktop, single column on mobile
-
-LEFT COLUMN:
-- Health Score: Large circular gauge (0-100), color coded (red/yellow/green)
-- Red Flags: List of warning cards in red/orange
-- LLM Summary: Card with AI-generated explanation
-
-RIGHT COLUMN (tabs):
-Tab 1 "Overlap"
-- Overlap matrix: table showing each fund pair and their overlap %
-- Color-coded cells: red > 30%, yellow 15-30%, green < 15%
-- Below matrix: list of stocks appearing in multiple funds
-
-Tab 2 "Sectors"
-- Pie chart of sector breakdown
-- Bar chart of market cap breakdown (Large/Mid/Small/Debt)
-- Highlight if any sector > 30%
-
-Tab 3 "Costs"
-- Table: each fund with its expense ratio, Direct/Regular status
-- Summary: weighted average expense ratio
-- If any Regular plans: "You could save ₹X/year by switching to Direct"
-
-Tab 4 "Top Stocks"
-- Table: top 15 stocks by total portfolio exposure
-- Columns: Stock name, Sector, % of portfolio, Appears in N funds
-
-BOTTOM BAR:
-- "Share Report" button → copies shareable URL to clipboard
-- "Download PDF" button (Phase 2 feature, show as disabled for now)
-
-3. app/report/[sessionId]/page.tsx — Shareable Report
-- Static view of a saved analysis
-- Same layout as results but read-only
-- Shows "Analyzed on [date]" header
-- "Re-analyze with current data" button
-
-COMPONENT STRUCTURE:
-components/
-├── ui/                          # shadcn-style base components
-│   ├── Button.tsx
-│   ├── Card.tsx
-│   ├── Badge.tsx
-│   └── Input.tsx
-├── fund-input/
-│   ├── FundSearchInput.tsx       # Typeahead search component
-│   └── PortfolioBuilder.tsx      # Manages the list of added funds
-├── analytics/
-│   ├── HealthScoreGauge.tsx      # Circular gauge with score
-│   ├── OverlapMatrix.tsx         # Color-coded overlap table
-│   ├── SectorPieChart.tsx        # Recharts PieChart
-│   ├── MarketCapBar.tsx          # Recharts BarChart
-│   ├── ExpenseAuditTable.tsx     # Cost breakdown table
-│   └── RedFlagsList.tsx          # Warning cards
-└── common/
-    ├── Header.tsx
-    └── Footer.tsx
-
-lib/api-client.ts:
-Create typed API functions:
-- searchFunds(query: string): Promise<FundSearchResult[]>
-- analyzPortfolio(funds: FundInput[]): Promise<AnalysisResult>
-- getReport(sessionId: string): Promise<AnalysisResult>
-
-lib/types.ts:
-Mirror the backend Pydantic schemas as TypeScript interfaces.
-
-hooks/usePortfolioAnalysis.ts:
-Custom hook that manages:
-- Input state (list of funds)
-- Loading state
-- Analysis result state
-- Error state
-- The analyzePortfolio() function call
-
-STATE MANAGEMENT:
-No Redux/Zustand needed for Phase 1 — React useState + useReducer is sufficient.
-The portfolio input state and analysis result fit cleanly in a single page component.
-
-API CONTRACTS (Frontend calling Backend):
-Frontend base URL: from env NEXT_PUBLIC_API_URL
-
-All API calls go through lib/api-client.ts, never directly from components.
-
-ENVIRONMENT VARIABLES:
-Frontend .env.local:
-NEXT_PUBLIC_API_URL=http://localhost:8000
-
-Backend .env:
-DATABASE_URL=...
-REDIS_URL=...
-GEMINI_API_KEY=...
-ENVIRONMENT=development
-
-ERROR HANDLING:
-- If fund not found: show inline error "Fund not found — try a different name"
-- If analysis fails: show "Analysis failed — please try again" with retry button
-- If holdings data not available: show "Holdings data not available for this fund" and exclude from overlap (but still include in sector/cost analysis)
-- Network errors: toast notification
+Panel 3 "Transaction Detail" (right, collapsed by default):
+- Full table of all gain entries
+- Sortable by: fund name, gain type, gain amount, tax amount
+- Filter by: STCG / LTCG / All
+- Export as CSV button
 
 TESTING:
-Backend:
-- Test overlap_engine.py with 3 hardcoded funds (use pytest)
-- Test health_scorer.py with known inputs and expected outputs
-- Test /api/portfolio/analyze with httpx TestClient
-
-Frontend:
-- Manual testing: add 3–5 funds, verify analysis completes
-- Test shareable link: analyze → copy link → open in incognito → verify report loads
-
-DEPLOYMENT:
-Backend → Railway:
-- Set all env vars in Railway dashboard
-- Procfile: web: uvicorn main:app --host 0.0.0.0 --port $PORT
-
-Frontend → Vercel:
-- Set NEXT_PUBLIC_API_URL to Railway backend URL
-- Deploy from GitHub
+- Create a test CAMS PDF with known transactions (manually or use sample)
+- Verify FIFO calculation gives correct results for known inputs
+- Test edge cases: 
+  - Units purchased in multiple SIPs, partially redeemed
+  - Switch transactions
+  - Dividend reinvestment followed by redemption
 
 EXPECTED OUTPUT:
-A live, deployed web application where a user can:
-1. Search and select Indian mutual funds by name
-2. Enter their units for each fund
-3. Click "Analyze"
-4. See a complete portfolio health report in under 10 seconds
-5. Share the report via a link
-
-This is your MVP. This is what you demo in interviews.
+User uploads CAMS PDF → gets exact tax breakdown in under 30 seconds.
+"Your FY2024-25 tax liability: ₹18,400. You can save ₹4,200 by redeeming 
+50 units of Fund X before March 31 to offset STCG gains."
