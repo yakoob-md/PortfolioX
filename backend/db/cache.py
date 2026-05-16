@@ -1,5 +1,8 @@
-import redis.asyncio as redis
-from config import settings
+import redis.asyncio as redis_async
+try:
+    from config import settings
+except ImportError:
+    from ..config import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -12,7 +15,7 @@ class CacheService:
         self.redis_client = None
         if settings.REDIS_URL:
             try:
-                self.redis_client = redis.from_url(
+                self.redis_client = redis_async.from_url(
                     settings.REDIS_URL,
                     encoding="utf-8",
                     decode_responses=True
