@@ -36,6 +36,24 @@ async def upload_cams_pdf(file: UploadFile = File(...), db: AsyncSession = Depen
             if not parsed_statement.folios:
                 raise HTTPException(status_code=400, detail="Could not extract any mutual fund folios from the PDF.")
                 
+            # Resolve fund codes and asset types
+            from services.fund_resolver import FundResolver
+            from db.repositories.fund_repo import FundRepository
+            fund_repo = FundRepository(db)
+            resolver = FundResolver(fund_repo)
+            
+            for folio in parsed_statement.folios:
+                fund = await resolver.resolve_fund(folio.scheme_name)
+                if fund:
+                    folio.scheme_code = fund.scheme_code
+                    folio.category = fund.category
+                    # Simple heuristic for asset type
+                    cat = (fund.category or "").lower()
+                    if any(x in cat for x in ["debt", "liquid", "money market", "gilt", "overnight", "duration"]):
+                        folio.asset_type = "Debt"
+                    else:
+                        folio.asset_type = "Equity"
+                
             tax_engine = TaxEngine()
             tax_calculation = tax_engine.calculate_gains(parsed_statement.folios)
             
@@ -78,6 +96,25 @@ async def get_tax_report(session_id: str, db: AsyncSession = Depends(get_db)):
 @router.post("/manual")
 async def calculate_tax_manual(folios: List[Folio], db: AsyncSession = Depends(get_db)):
     try:
+        # Resolve fund codes and asset types
+        from services.fund_resolver import FundResolver
+        from db.repositories.fund_repo import FundRepository
+        fund_repo = FundRepository(db)
+        resolver = FundResolver(fund_repo)
+        
+        for folio in folios:
+            if not folio.scheme_code or folio.scheme_code == "dummy":
+                fund = await resolver.resolve_fund(folio.scheme_name)
+                if fund:
+                    folio.scheme_code = fund.scheme_code
+                    folio.category = fund.category
+                    # Simple heuristic for asset type
+                    cat = (fund.category or "").lower()
+                    if any(x in cat for x in ["debt", "liquid", "money market", "gilt", "overnight", "duration"]):
+                        folio.asset_type = "Debt"
+                    else:
+                        folio.asset_type = "Equity"
+
         tax_engine = TaxEngine()
         tax_calculation = tax_engine.calculate_gains(folios)
         

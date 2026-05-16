@@ -17,6 +17,7 @@ interface Props {
 }
 
 export default function AnalysisDashboard({ result, isReadOnly = false }: Props) {
+  const [activeTab, setActiveTab] = useState('overlap');
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = () => {
@@ -76,7 +77,7 @@ export default function AnalysisDashboard({ result, isReadOnly = false }: Props)
         {/* Right Column: Tabs */}
         <div className="lg:col-span-8">
           <div className="bg-[#111827] border border-[#1e293b] rounded-xl overflow-hidden">
-            <Tabs defaultValue="overlap" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <div className="border-b border-[#1e293b] px-4 pt-3">
                 <TabsList className="w-full justify-start bg-transparent border-0 p-0 h-auto gap-0 hover:bg-transparent">
                   <TabsTrigger value="overlap" className="rounded-b-none border-b-2 border-transparent data-[state=active]:border-emerald-400 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-emerald-400">
@@ -108,9 +109,13 @@ export default function AnalysisDashboard({ result, isReadOnly = false }: Props)
                 <div className="grid md:grid-cols-2 gap-6 h-[400px]">
                   <div className="flex flex-col">
                     <div className="section-label mb-4">Sector Exposure</div>
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer key={`pie-${activeTab}`} width="100%" height="100%">
                       <PieChart>
-                        <Pie data={Object.entries(result.sector_exposure).map(([name, value]) => ({ name, value }))} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={3} dataKey="value" stroke="none">
+                        <Pie 
+                          data={Object.entries(result.sector_exposure).map(([name, value]) => ({ name, value }))} 
+                          cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={3} 
+                          dataKey="value" nameKey="name" stroke="none"
+                        >
                           {Object.entries(result.sector_exposure).map((_, index) => (<Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />))}
                         </Pie>
                         <Tooltip contentStyle={{ background: '#111827', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '12px' }} itemStyle={{ color: '#94a3b8' }} labelStyle={{ color: '#e2e8f0', fontWeight: 600 }} />
@@ -119,7 +124,7 @@ export default function AnalysisDashboard({ result, isReadOnly = false }: Props)
                   </div>
                   <div className="flex flex-col">
                     <div className="section-label mb-4">Market Cap Breakdown</div>
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer key={`bar-${activeTab}`} width="100%" height="100%">
                       <BarChart data={Object.entries(result.marketcap_breakdown).map(([name, value]) => ({ name, value }))} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                         <XAxis dataKey="name" stroke="#4b5563" fontSize={11} tickLine={false} axisLine={false} />

@@ -14,6 +14,8 @@ class Folio(BaseModel):
     scheme_code: str
     folio_number: str
     current_units: float
+    asset_type: Literal['Equity', 'Debt', 'Other'] = 'Equity'
+    category: Optional[str] = None
     transactions: List[Transaction]
 
 class ParsedStatement(BaseModel):
@@ -24,10 +26,11 @@ class ParsedStatement(BaseModel):
 
 class GainEntry(BaseModel):
     scheme_name: str
+    asset_type: str
     purchase_date: date
     redemption_date: date
     holding_days: int
-    gain_type: Literal['STCG', 'LTCG']
+    gain_type: Literal['STCG', 'LTCG', 'Business Income'] # Business Income for Debt post-2023
     purchase_nav: float
     redemption_nav: float
     units: float
@@ -50,10 +53,12 @@ class TaxCalculation(BaseModel):
     financial_year: str
     total_stcg: float
     total_ltcg: float
+    total_debt_gain: float
     ltcg_exempt: float
     ltcg_taxable: float
     stcg_tax: float
     ltcg_tax: float
+    debt_tax: float
     total_tax: float
     gain_entries: List[GainEntry]
     harvesting_opportunities: List[HarvestingOpportunity]
