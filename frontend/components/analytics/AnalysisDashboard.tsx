@@ -174,7 +174,7 @@ export default function AnalysisDashboard({ result, isReadOnly = false }: Props)
                             <td className="py-3">
                               <span className={f.plan_type === 'Direct' ? 'badge-direct' : 'badge-regular'}>{f.plan_type}</span>
                             </td>
-                            <td className="py-3 text-right data-value text-slate-300">{f.expense_ratio || '—'}%</td>
+                            <td className="py-3 text-right data-value text-slate-300">{(f.expense_ratio || 0).toFixed(2)}%</td>
                           </tr>
                         ))}
                       </tbody>
