@@ -47,7 +47,7 @@ export default function CaptureRatio() {
   const chartData = allFunds.slice(0, 15).map(f => ({
     name: f.schemeName.split(' ').slice(0, 3).join(' '),
     'Upside 1Y': f.upsideCapture1y || 0,
-    'Downside 1Y': f.downsideCapture1y || 0,
+    'Downside 1Y': f.upsideCapture1y || 0,
     category: f.category
   }))
 
@@ -110,17 +110,17 @@ export default function CaptureRatio() {
                   <TrendingDown className="h-4 w-4 text-orange-600" />
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <p className="text-4xl font-black text-orange-600">{result.captureRatios.downsideCapture1y || '—'}%</p>
+                  <p className="text-4xl font-black text-orange-600">{result.captureRatios.upsideCapture1y || '—'}%</p>
                   <span className="text-[10px] font-bold text-muted-foreground">vs 100% Market</span>
                 </div>
                 <div className="mt-4 h-1.5 w-full rounded-full bg-orange-200/50 dark:bg-orange-900/30 overflow-hidden">
                   <div 
                     className="h-full rounded-full bg-orange-500" 
-                    style={{ width: `${Math.min((result.captureRatios.downsideCapture1y || 0), 100)}%` }} 
+                    style={{ width: `${Math.min((result.captureRatios.upsideCapture1y || 0), 100)}%` }} 
                   />
                 </div>
                 <p className="text-[11px] font-medium text-orange-800/80 dark:text-orange-400/80 mt-3 leading-relaxed">
-                  {result.captureRatios.downsideCapture1y && result.captureRatios.downsideCapture1y < 100
+                  {result.captureRatios.upsideCapture1y && result.captureRatios.upsideCapture1y < 100
                     ? `Excellent. It fell less than the market during crashes.`
                     : `Careful. It fell more than the market during crashes.`}
                 </p>
