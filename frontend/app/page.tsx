@@ -28,6 +28,9 @@ export default function LandingPage() {
             <Link href="/analyze" className="bg-emerald-500 hover:bg-emerald-600 text-white text-lg font-bold py-4 px-10 rounded-xl transition-all shadow-lg shadow-emerald-500/20">
               Analyze My Portfolio
             </Link>
+            <Link href="/tax" className="bg-slate-800 hover:bg-slate-700 text-white text-lg font-bold py-4 px-10 rounded-xl transition-all border border-slate-700">
+              Calculate Tax Liability
+            </Link>
           </div>
         </section>
 
