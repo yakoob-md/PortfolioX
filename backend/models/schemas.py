@@ -26,6 +26,7 @@ class Holding(BaseModel):
     stock_isin: Optional[str] = None
     stock_name: str
     sector: Optional[str] = None
+    market_cap: Optional[str] = None
     holding_percentage: float
     asset_type: str  # Equity/Debt/Cash
 

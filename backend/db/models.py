@@ -41,7 +41,8 @@ class FundHolding(Base):
     stock_isin: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, index=True)
     stock_name: Mapped[str] = mapped_column(Text, nullable=False)
     sector: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    holding_percentage: Mapped[Optional[float]] = mapped_column(Numeric(6, 3), nullable=True)
+    market_cap: Mapped[Optional[str]] = mapped_column(Text, nullable=True) # Large/Mid/Small
+    holding_percentage: Mapped[float] = mapped_column(Numeric(10, 4), nullable=False)
     market_value_cr: Mapped[Optional[float]] = mapped_column(Numeric(15, 2), nullable=True)
     asset_type: Mapped[Optional[str]] = mapped_column(Text, nullable=True) # Equity/Debt/Cash/Other
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

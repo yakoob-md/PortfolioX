@@ -115,16 +115,20 @@ class OverlapEngine:
         weights: Dict[str, float]
     ) -> Dict[str, float]:
         """
-        Returns market cap breakdown. 
-        For MVP, we use a simple heuristic based on fund category if stock-level data is missing,
-        but ideally we use stock market cap. 
-        Since we don't have stock market cap in the DB yet, we'll return a placeholder or 
-        estimate based on sectors for now.
+        Returns market cap breakdown aggregated across all funds.
         """
-        # Placeholder for MVP
-        return {
-            "Large Cap": 70.0,
-            "Mid Cap": 20.0,
-            "Small Cap": 5.0,
-            "Debt/Cash": 5.0
-        }
+        mcap_totals = {"Large Cap": 0.0, "Mid Cap": 0.0, "Small Cap": 0.0, "Other": 0.0}
+        
+        for code, holdings in fund_holdings.items():
+            fund_weight = weights.get(code, 0.0)
+            for h in holdings:
+                mcap = h.market_cap or "Other"
+                if mcap not in ["Large", "Mid", "Small"]:
+                    mcap = "Other"
+                else:
+                    mcap = f"{mcap} Cap"
+                
+                weighted_pct = h.holding_percentage * fund_weight
+                mcap_totals[mcap] = mcap_totals.get(mcap, 0.0) + weighted_pct
+                    
+        return {cap: round(val, 2) for cap, val in mcap_totals.items()}
