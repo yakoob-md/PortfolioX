@@ -119,7 +119,7 @@ I'm ready to dive into your specific holdings—just ask!`
     setMessages((prev) => [...prev, assistantMsg])
 
     try {
-      const res = await fetch('/api/ai/chat', {
+      const res = await fetch("/ai/chat", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
