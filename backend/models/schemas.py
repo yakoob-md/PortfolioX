@@ -11,6 +11,8 @@ class FundBase(BaseModel):
     plan_type: Optional[str] = None
     category: Optional[str] = None
 
+    model_config = ConfigDict(from_attributes=True)
+
 class FundDetail(FundBase):
     sub_category: Optional[str] = None
     option_type: Optional[str] = None

@@ -2,7 +2,12 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
+import sys
+import os
 from contextlib import asynccontextmanager
+
+# Add current directory to path for local imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import settings
 from db.database import engine
