@@ -14,7 +14,7 @@ import QuickImport from '@/components/fundvista/QuickImport'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
-import FundDetail from '@/components/FundDetail'
+import FundDetail from '@/components/fundvista/FundDetail'
 
 export default function PortfolioBuilder() {
   const {
