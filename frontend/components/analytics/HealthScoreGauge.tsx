@@ -1,49 +1,50 @@
 'use client';
 
+import { getScoreLabel } from '@/lib/utils';
+
 interface Props {
   score: number;
 }
 
 export default function HealthScoreGauge({ score }: Props) {
-  const getScoreColor = (s: number) => {
-    if (s >= 80) return '#10b981'; // Green
-    if (s >= 50) return '#f59e0b'; // Yellow
-    return '#ef4444'; // Red
-  };
-
-  const color = getScoreColor(score);
-  const radius = 70;
+  const { label, color } = getScoreLabel(score);
+  const radius = 72;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
 
+  const getStrokeColor = (s: number) => {
+    if (s >= 80) return '#10b981';
+    if (s >= 60) return '#14b8a6';
+    if (s >= 40) return '#f59e0b';
+    if (s >= 20) return '#f97316';
+    return '#ef4444';
+  };
+
+  const strokeColor = getStrokeColor(score);
+
   return (
     <div className="flex flex-col items-center">
-      <div className="relative w-48 h-48">
-        <svg className="w-full h-full transform -rotate-90">
+      <div className="relative w-44 h-44">
+        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 192 192">
+          <circle cx="96" cy="96" r={radius} stroke="#1e293b" strokeWidth="8" fill="transparent" />
           <circle
-            cx="96"
-            cy="96"
-            r={radius}
-            stroke="currentColor"
-            strokeWidth="12"
-            fill="transparent"
-            className="text-slate-800"
+            cx="96" cy="96" r={radius}
+            stroke={strokeColor} strokeWidth="8" fill="transparent"
+            strokeDasharray={circumference}
+            style={{ strokeDashoffset: offset, transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            strokeLinecap="round"
           />
           <circle
-            cx="96"
-            cy="96"
-            r={radius}
-            stroke={color}
-            strokeWidth="12"
-            fill="transparent"
+            cx="96" cy="96" r={radius}
+            stroke={strokeColor} strokeWidth="12" fill="transparent"
             strokeDasharray={circumference}
-            style={{ strokeDashoffset: offset, transition: 'stroke-dashoffset 1s ease-out' }}
-            strokeLinecap="round"
+            style={{ strokeDashoffset: offset, transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            strokeLinecap="round" opacity="0.15" filter="blur(4px)"
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-5xl font-black" style={{ color }}>{score}</span>
-          <span className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-1">Health Score</span>
+          <span className="text-5xl font-black data-value leading-none" style={{ color: strokeColor }}>{score}</span>
+          <span className={`text-xs font-bold uppercase tracking-[0.15em] mt-2 ${color}`}>{label}</span>
         </div>
       </div>
     </div>

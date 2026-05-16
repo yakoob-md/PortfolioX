@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Shield, Loader2 } from 'lucide-react';
+import { Shield, Loader2, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import FundSearchInput from '@/components/fund-input/FundSearchInput';
 import PortfolioBuilder from '@/components/fund-input/PortfolioBuilder';
@@ -46,76 +46,92 @@ export default function AnalyzePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 text-center">
-        <Loader2 className="w-16 h-16 text-emerald-500 animate-spin mb-6" />
-        <h2 className="text-2xl font-bold mb-2">Analyzing Your Portfolio</h2>
-        <p className="text-slate-400">Computing overlap and health scores...</p>
+      <div className="min-h-screen bg-[#0a0f1e] flex flex-col items-center justify-center p-8 text-center">
+        <div className="relative">
+          <div className="w-20 h-20 rounded-full border-2 border-[#1e293b] flex items-center justify-center">
+            <Loader2 className="w-10 h-10 text-emerald-400 animate-spin" />
+          </div>
+          <div className="absolute -inset-4 rounded-full border border-emerald-500/10 animate-ping" />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-100 mt-8 mb-2">Analyzing Your Portfolio</h2>
+        <p className="text-slate-400 text-sm max-w-xs">Computing overlap matrices, sector exposure, and health scores...</p>
+        <div className="mt-6 flex gap-1">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="w-2 h-2 rounded-full bg-emerald-500/40 animate-pulse-subtle" style={{ animationDelay: `${i * 0.3}s` }} />
+          ))}
+        </div>
       </div>
     );
   }
 
   if (result) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-50 p-4 md:p-8">
-        <header className="max-w-7xl mx-auto flex items-center justify-between mb-8 pb-6 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <Shield className="w-6 h-6 text-emerald-500" />
-            <span className="text-xl font-bold tracking-tight">PortfolioX <span className="text-slate-500 font-normal">| Analysis</span></span>
+      <div className="min-h-screen bg-[#0a0f1e] text-slate-200">
+        <header className="sticky top-0 z-50 border-b border-[#1e293b] bg-[#0a0f1e]/80 backdrop-blur-xl">
+          <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-emerald-400" />
+              </div>
+              <span className="text-lg font-bold tracking-tight text-slate-100">Portfolio<span className="text-emerald-400">X</span></span>
+              <span className="hidden sm:inline text-slate-600 mx-2">|</span>
+              <span className="hidden sm:inline text-sm text-slate-500 font-medium">Analysis Report</span>
+            </div>
+            <button onClick={() => setResult(null)} className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-100 font-medium transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Back to Input
+            </button>
           </div>
-          <button 
-            onClick={() => setResult(null)}
-            className="text-slate-400 hover:text-slate-100 font-semibold"
-          >
-            ← Back to Input
-          </button>
         </header>
-
-        <AnalysisDashboard result={result} />
+        <div className="p-4 md:p-8">
+          <AnalysisDashboard result={result} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 p-4 md:p-8">
-      <header className="max-w-4xl mx-auto flex items-center justify-between mb-12">
-        <div className="flex items-center gap-2">
-          <Shield className="w-8 h-8 text-emerald-500" />
-          <span className="text-2xl font-bold tracking-tight">PortfolioX</span>
+    <div className="min-h-screen bg-[#0a0f1e] text-slate-200">
+      <header className="sticky top-0 z-50 border-b border-[#1e293b] bg-[#0a0f1e]/80 backdrop-blur-xl">
+        <div className="max-w-4xl mx-auto flex items-center justify-between px-6 h-16">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-emerald-400" />
+            </div>
+            <span className="text-lg font-bold tracking-tight text-slate-100">Portfolio<span className="text-emerald-400">X</span></span>
+          </div>
+          <Link href="/" className="text-sm text-slate-400 hover:text-slate-100 font-medium transition-colors">Home</Link>
         </div>
-        <Link href="/" className="text-slate-400 hover:text-slate-100 font-semibold">Home</Link>
       </header>
 
-      <main className="max-w-4xl mx-auto animate-fade-in">
-        <div className="mb-12">
-          <h1 className="text-4xl font-black mb-4 tracking-tight">Build Your Portfolio</h1>
-          <p className="text-slate-400 text-lg leading-relaxed">Add at least 2 funds you hold and specify units to discover hidden overlaps and costs.</p>
+      <main className="max-w-4xl mx-auto px-6 py-12 animate-fade-in">
+        <div className="mb-10">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-emerald-400" />
+            <span className="text-xs font-bold text-emerald-400 uppercase tracking-[0.15em]">Portfolio Builder</span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-slate-100 tracking-tight mb-3">Build Your Portfolio</h1>
+          <p className="text-slate-400 text-base leading-relaxed max-w-xl">Add at least 2 funds you hold and specify units to discover hidden overlaps, sector concentration, and cost leakages.</p>
         </div>
 
-        <div className="space-y-8">
-          <div className="card bg-slate-900/80 border-slate-700/50">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Add Fund</h2>
+        <div className="space-y-6">
+          <div className="bg-[#111827] border border-[#1e293b] rounded-xl p-5">
+            <div className="section-label mb-3">Add Fund</div>
             <FundSearchInput onSelect={handleAddFund} />
           </div>
-
-          <PortfolioBuilder 
-            funds={selectedFunds} 
-            onUpdateUnits={handleUpdateUnits}
-            onRemove={handleRemove}
-          />
-
-          <div className="pt-8 flex justify-center">
+          <PortfolioBuilder funds={selectedFunds} onUpdateUnits={handleUpdateUnits} onRemove={handleRemove} />
+          <div className="pt-6 flex flex-col items-center gap-3">
             <button
               onClick={handleAnalyze}
               disabled={selectedFunds.length < 2 || selectedFunds.some(f => f.units <= 0)}
-              className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-800 disabled:text-slate-600 text-white text-xl font-bold py-5 px-16 rounded-2xl transition-all shadow-xl shadow-emerald-500/10"
+              className="inline-flex items-center justify-center gap-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:bg-[#1e293b] disabled:text-[#4b5563] disabled:shadow-none disabled:cursor-not-allowed text-white text-lg font-bold py-4 px-10 rounded-xl transition-all duration-200 shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/30 min-w-[280px]"
             >
+              <Sparkles className="w-5 h-5" />
               Analyze My Portfolio
             </button>
+            {selectedFunds.length === 1 && (
+              <p className="text-amber-400/80 text-sm animate-pulse-subtle">Add at least 2 funds to see overlap analysis</p>
+            )}
           </div>
-          
-          {selectedFunds.length === 1 && (
-            <p className="text-center text-orange-400 text-sm animate-pulse">Add at least 2 funds to see overlap analysis.</p>
-          )}
         </div>
       </main>
     </div>
