@@ -677,7 +677,7 @@ export default function XIRRCalculator() {
                             </div>
                           </td>
                           <td className={`py-2 px-3 text-right font-bold flex items-center justify-end gap-1 ${h.xirr >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            {h.xirr > 100 && <AlertTriangle className="h-3 w-3 text-amber-500" title="Unrealistically high due to short holding period" />}
+                            {h.xirr > 100 && <AlertTriangle className="h-3 w-3 text-amber-500" />}
                             {h.xirr >= 0 ? '+' : ''}{h.xirr.toFixed(2)}%
                           </td>
                           {xirrResult.liveXirrHoldings && xirrResult.liveXirrHoldings.length > 0 && (
