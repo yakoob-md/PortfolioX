@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Label } from '@/components/ui/label'
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
-import FundDetail from '@/components/fundvista/FundDetail'
+import FundDetail from '@/components/dashboard/FundDetail'
 
 const categories = ['All', 'Equity', 'Debt', 'Hybrid']
 const subCategories: Record<string, string[]> = {

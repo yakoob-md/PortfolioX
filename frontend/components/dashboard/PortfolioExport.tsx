@@ -68,7 +68,7 @@ export default function PortfolioExport() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `fundvista-portfolio-${new Date().toISOString().split('T')[0]}.json`
+    a.download = `portfolio-x-data-${new Date().toISOString().split('T')[0]}.json`
     a.click()
     URL.revokeObjectURL(url)
     toast.success('Portfolio exported as JSON')
@@ -107,7 +107,7 @@ export default function PortfolioExport() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `fundvista-portfolio-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `portfolio-x-data-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
     toast.success('Portfolio exported as CSV')

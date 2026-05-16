@@ -39,7 +39,7 @@ export default function Navbar() {
             <span className="text-lg font-extrabold tracking-tight text-foreground">
               Portfolio<span className="text-primary">X</span>
             </span>
-            <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">India&apos;s MF Intelligence</div>
+            <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Premium Wealth Intelligence</div>
           </div>
         </div>
 

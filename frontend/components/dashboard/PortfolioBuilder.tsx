@@ -10,11 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog'
-import QuickImport from '@/components/fundvista/QuickImport'
+import QuickImport from '@/components/dashboard/QuickImport'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
-import FundDetail from '@/components/fundvista/FundDetail'
+import FundDetail from '@/components/dashboard/FundDetail'
 
 export default function PortfolioBuilder() {
   const {

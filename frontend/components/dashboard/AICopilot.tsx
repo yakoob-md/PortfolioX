@@ -233,10 +233,10 @@ I'm ready to dive into your specific holdings—just ask!`
                   <Bot className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-white font-bold leading-tight">FundVista AI</h3>
+                  <h3 className="text-white font-bold leading-tight">PortfolioX Intelligence</h3>
                   <div className="flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
-                    <span className="text-[10px] text-emerald-100 font-medium uppercase tracking-wider">Portfolio Aware</span>
+                    <span className="text-[10px] text-emerald-100 font-medium uppercase tracking-wider">System Operational</span>
                   </div>
                 </div>
               </div>
