@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog'
-import QuickImport from '@/components/QuickImport'
+import QuickImport from '@/components/fundvista/QuickImport'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
@@ -424,3 +424,4 @@ function handleQuickAdd(fund: FundData) {
   })
   toast.success(`${fund.schemeName} added to portfolio`)
 }
+
