@@ -51,4 +51,26 @@ class CacheService:
         except Exception as e:
             logger.error(f"Redis delete error for key {key}: {e}")
 
+    async def check_rate_limit(self, identifier: str, limit: int = 30, window: int = 60) -> bool:
+        """
+        Check if an identifier (e.g., IP) has exceeded the rate limit.
+        Returns True if within limit, False if exceeded.
+        """
+        if not self.redis_client:
+            return True # Fail open if Redis is down
+            
+        key = f"rate_limit:{identifier}"
+        try:
+            # Increment the counter for this key
+            current_count = await self.redis_client.incr(key)
+            
+            # If it's the first hit, set the expiration window
+            if current_count == 1:
+                await self.redis_client.expire(key, window)
+                
+            return current_count <= limit
+        except Exception as e:
+            logger.error(f"Rate limit error for {identifier}: {e}")
+            return True # Fail open
+
 cache_service = CacheService()

@@ -11,10 +11,10 @@ class Fund(Base):
     """
     __tablename__ = "funds"
 
-    scheme_code: Mapped[str] = mapped_column(String(10), primary_key=True)
+    scheme_code: Mapped[str] = mapped_column(String(10), primary_key=True, index=True)
     scheme_name: Mapped[str] = mapped_column(Text, nullable=False)
-    amc_name: Mapped[str] = mapped_column(Text, nullable=False)
-    category: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    amc_name: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    category: Mapped[Optional[str]] = mapped_column(Text, nullable=True, index=True)
     sub_category: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     plan_type: Mapped[Optional[str]] = mapped_column(Text, nullable=True) # Direct/Regular
     option_type: Mapped[Optional[str]] = mapped_column(Text, nullable=True) # Growth/IDCW/Bonus
@@ -36,9 +36,9 @@ class FundHolding(Base):
     __tablename__ = "fund_holdings"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    scheme_code: Mapped[str] = mapped_column(String(10), ForeignKey("funds.scheme_code"))
-    disclosure_date: Mapped[date] = mapped_column(Date, nullable=False)
-    stock_isin: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    scheme_code: Mapped[str] = mapped_column(String(10), ForeignKey("funds.scheme_code"), index=True)
+    disclosure_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    stock_isin: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, index=True)
     stock_name: Mapped[str] = mapped_column(Text, nullable=False)
     sector: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     holding_percentage: Mapped[Optional[float]] = mapped_column(Numeric(6, 3), nullable=True)

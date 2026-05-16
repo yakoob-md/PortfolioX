@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import json
@@ -13,6 +13,7 @@ router = APIRouter(prefix="/funds", tags=["funds"])
 
 @router.get("/search", response_model=FundSearchResponse)
 async def search_funds(
+    request: Request,
     q: str = Query(..., min_length=2, description="Search query for mutual funds"),
     limit: int = Query(10, ge=1, le=50),
     db: AsyncSession = Depends(get_db)
@@ -20,7 +21,16 @@ async def search_funds(
     """
     Search for mutual funds by name or AMC.
     Results are cached in Redis for 1 hour.
+    Rate limit: 30 requests/min.
     """
+    # Rate limiting
+    client_ip = request.client.host
+    if not await cache_service.check_rate_limit(client_ip, limit=30, window=60):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded. Try again in a minute."
+        )
+    
     cache_key = f"search:{q}:{limit}"
     
     # Try cache first
