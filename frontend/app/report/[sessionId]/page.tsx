@@ -32,24 +32,24 @@ export default function ReportPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0f1e] flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-16 h-16 rounded-full border-2 border-[#1e293b] flex items-center justify-center mb-6">
-          <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-16 h-16 rounded-full border-2 border-border flex items-center justify-center mb-6">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
-        <h2 className="text-xl font-bold text-slate-100 mb-2">Loading Shared Report</h2>
-        <p className="text-slate-500 text-sm">Fetching portfolio analysis...</p>
+        <h2 className="text-xl font-bold text-foreground mb-2">Loading Shared Report</h2>
+        <p className="text-muted-foreground text-sm">Fetching portfolio analysis...</p>
       </div>
     );
   }
 
   if (error || !result) {
     return (
-      <div className="min-h-screen bg-[#0a0f1e] flex flex-col items-center justify-center p-8 text-center">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8 text-center">
         <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6">
-          <AlertCircle className="w-8 h-8 text-red-400" />
+          <AlertCircle className="w-8 h-8 text-red-500" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-100 mb-2">Report Not Found</h2>
-        <p className="text-slate-400 text-sm mb-8 max-w-xs">{error}</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Report Not Found</h2>
+        <p className="text-muted-foreground text-sm mb-8 max-w-xs">{error}</p>
         <Link href="/analyze" className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold py-2 px-6 rounded-lg transition-all">
           <ExternalLink className="w-4 h-4" /> Create New Analysis
         </Link>
@@ -58,18 +58,18 @@ export default function ReportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0f1e] text-slate-200">
-      <header className="sticky top-0 z-50 border-b border-[#1e293b] bg-[#0a0f1e]/80 backdrop-blur-xl">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-emerald-400" />
+              <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <span className="text-lg font-bold tracking-tight text-slate-100">Portfolio<span className="text-emerald-400">X</span></span>
-            <span className="hidden sm:inline text-slate-600 mx-2">|</span>
-            <span className="hidden sm:inline text-sm text-slate-500 font-medium">Shared Report</span>
+            <span className="text-lg font-bold tracking-tight text-foreground">Portfolio<span className="text-emerald-600 dark:text-emerald-400">X</span></span>
+            <span className="hidden sm:inline text-muted-foreground/50 mx-2">|</span>
+            <span className="hidden sm:inline text-sm text-muted-foreground font-medium">Shared Report</span>
           </div>
-          <Link href="/analyze" className="inline-flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
+          <Link href="/analyze" className="inline-flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 font-medium transition-colors">
             <ExternalLink className="w-4 h-4" /> Analyze Yours
           </Link>
         </div>

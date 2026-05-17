@@ -82,7 +82,7 @@ export default function Home() {
   const renderContent = useMemo(() => (
     <ErrorBoundary>
       <>
-        {/* ── INSIGHTS ─────────────────────────── */}
+        {/* -- INSIGHTS --------------------------- */}
         {activeTab === 'explore'        && <ExploreFunds />}
         {activeTab === 'market'         && <MarketDashboard />}
         {activeTab === 'heatmap'        && <FundHeatmap />}
@@ -93,7 +93,7 @@ export default function Home() {
         {activeTab === 'rollingreturns' && <RollingReturns />}
         {activeTab === 'categoryperf'   && <CategoryPerformance />}
 
-        {/* ── MANAGEMENT ───────────────────────── */}
+        {/* -- MANAGEMENT ------------------------- */}
         {activeTab === 'portfolio'      && <PortfolioAnalyze />}
         {activeTab === 'compare'        && <CompareView />}
         {activeTab === 'overlap'        && <FundOverlap />}
@@ -101,7 +101,7 @@ export default function Home() {
         {activeTab === 'diversification'&& <DiversificationScore />}
         {activeTab === 'montecarlo'     && <MonteCarloSim />}
 
-        {/* ── STRATEGY ─────────────────────────── */}
+        {/* -- STRATEGY --------------------------- */}
         {activeTab === 'savings'        && <SavingsCalculator />}
         {activeTab === 'sip'            && <SIPPlanner />}
         {activeTab === 'goals'          && <GoalPlanner />}
@@ -109,7 +109,7 @@ export default function Home() {
         {activeTab === 'fdvsmf'         && <FDvsMF />}
         {activeTab === 'inflation'      && <InflationCalculator />}
 
-        {/* ── OPTIMIZATION ─────────────────────── */}
+        {/* -- OPTIMIZATION ----------------------- */}
         {activeTab === 'tax'            && <TaxMitra />}
         {activeTab === 'exitload'       && <ExitLoadCalc />}
         {activeTab === 'rebalance'      && <RebalancingView />}
@@ -118,7 +118,7 @@ export default function Home() {
         {activeTab === 'elsstax'        && <ELSSTaxSaver />}
         {activeTab === 'emergency'      && <EmergencyFund />}
 
-        {/* ── TOOLKIT ──────────────────────────── */}
+        {/* -- TOOLKIT ---------------------------- */}
         {activeTab === 'xirr'           && <XIRRCalculator />}
         {activeTab === 'watchlist'      && <Watchlist />}
         {activeTab === 'export'         && <PortfolioExport />}
