@@ -111,9 +111,9 @@ export default function Home() {
         <motion.div
           key="launcher"
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, y: -40 }}
+          exit={{ opacity: 0, scale: 1.05 }}
           transition={{ duration: 0.8, ease: [0.43, 0.13, 0.23, 0.96] }}
-          className="fixed inset-0 z-[100]"
+          className="w-full relative"
         >
           <Launcher onLaunch={() => setShowLauncher(false)} />
         </motion.div>

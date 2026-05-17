@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 export default function Navbar() {
   const { activeTab, setActiveTab } = useFundStore()
   const [openGroup, setOpenGroup] = useState<string | null>(null)
-  const [isDark, setIsDark] = useState(true)
+  const [isDark, setIsDark] = useState(false)
 
   const grouped = GROUPS.map(group => ({
     group,
@@ -53,7 +53,7 @@ export default function Navbar() {
               <button className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all ${
                 activeGroup === group
                   ? 'text-primary bg-primary/10'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}>
                 {group}
                 <ChevronDown className={`w-3 h-3 transition-transform ${openGroup === group ? 'rotate-180' : ''}`} />
@@ -66,7 +66,7 @@ export default function Navbar() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 4, scale: 0.97 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute top-full left-0 mt-1 w-52 bg-card border border-border rounded-xl shadow-2xl shadow-black/40 p-2 z-50"
+                    className="absolute top-full left-0 mt-1 w-52 bg-card border border-border rounded-xl shadow-xl p-2 z-50"
                   >
                     {tabs.map(tab => {
                       const Icon = tab.icon
@@ -77,7 +77,7 @@ export default function Navbar() {
                           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${
                             activeTab === tab.id
                               ? 'bg-primary/10 text-primary font-semibold'
-                              : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                           }`}
                         >
                           <Icon className="w-3.5 h-3.5" />

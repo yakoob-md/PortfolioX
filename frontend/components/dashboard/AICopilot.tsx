@@ -209,11 +209,11 @@ I'm ready to dive into your specific holdings—just ask!`
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-8 right-8 z-50 h-16 w-16 rounded-3xl bg-emerald-600 shadow-2xl shadow-emerald-500/40 flex items-center justify-center border border-white/20 group"
+            className="fixed bottom-8 right-8 z-50 h-16 w-16 rounded-3xl bg-primary shadow-2xl shadow-primary/20 flex items-center justify-center border border-white/20 group"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
             <MessageCircle className="h-7 w-7 text-white relative z-10" />
-            <div className="absolute -right-1 -top-1 h-4 w-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
+            <div className="absolute -right-1 -top-1 h-4 w-4 bg-blue-400 rounded-full border-2 border-white animate-pulse" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -224,10 +224,10 @@ I'm ready to dive into your specific holdings—just ask!`
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed bottom-8 right-8 z-50 w-[440px] max-w-[calc(100vw-2rem)] h-[680px] max-h-[calc(100vh-4rem)] flex flex-col rounded-[2rem] bg-background border border-border/50 shadow-3xl overflow-hidden shadow-emerald-500/10"
+            className="fixed bottom-8 right-8 z-50 w-[440px] max-w-[calc(100vw-2rem)] h-[680px] max-h-[calc(100vh-4rem)] flex flex-col rounded-[2rem] bg-white border border-slate-200 shadow-3xl overflow-hidden shadow-blue-500/5"
           >
             {/* Header */}
-            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-6 flex items-center justify-between">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
                   <Bot className="h-6 w-6 text-white" />
@@ -235,7 +235,7 @@ I'm ready to dive into your specific holdings—just ask!`
                 <div>
                   <h3 className="text-white font-bold leading-tight">PortfolioX Intelligence</h3>
                   <div className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-300 animate-pulse" />
                     <span className="text-[10px] text-emerald-100 font-medium uppercase tracking-wider">System Operational</span>
                   </div>
                 </div>
@@ -254,11 +254,11 @@ I'm ready to dive into your specific holdings—just ask!`
             <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-muted/30">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-6 py-12">
-                  <div className="h-20 w-20 rounded-3xl bg-emerald-500/10 flex items-center justify-center">
-                    <Sparkles className="h-10 w-10 text-emerald-600/50" />
+                  <div className="h-20 w-20 rounded-3xl bg-primary/5 flex items-center justify-center">
+                    <Sparkles className="h-10 w-10 text-primary/30" />
                   </div>
                   <div className="space-y-2">
-                    <h4 className="text-lg font-bold text-foreground">Your Financial Intelligence</h4>
+                    <h4 className="text-lg font-bold text-foreground">Financial Intelligence</h4>
                     <p className="text-sm text-muted-foreground max-w-[280px]">
                       Ask about your specific holdings, tax implications, or Direct plan savings.
                     </p>
@@ -269,10 +269,10 @@ I'm ready to dive into your specific holdings—just ask!`
                         key={i}
                         variant="outline"
                         size="sm"
-                        className="w-full justify-start text-xs h-auto py-3 px-4 rounded-xl border-emerald-500/20 hover:bg-emerald-500/5 hover:border-emerald-500/40 text-left"
+                        className="w-full justify-start text-xs h-auto py-3 px-4 rounded-xl border-primary/10 hover:bg-primary/5 hover:border-primary/30 text-left"
                         onClick={() => sendMessage(q)}
                       >
-                        <ChevronRight className="h-3 w-3 mr-2 text-emerald-600" />
+                        <ChevronRight className="h-3 w-3 mr-2 text-primary" />
                         {q}
                       </Button>
                     ))}
@@ -282,21 +282,21 @@ I'm ready to dive into your specific holdings—just ask!`
                 messages.map((msg) => (
                   <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     {msg.role === 'assistant' && (
-                      <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0 mt-1 shadow-lg shadow-emerald-600/20">
+                      <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0 mt-1 shadow-lg shadow-primary/20">
                         <Bot className="h-5 w-5 text-white" />
                       </div>
                     )}
                     <div className="group relative max-w-[85%]">
                       <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
                         msg.role === 'user' 
-                          ? 'bg-emerald-600 text-white rounded-tr-none' 
-                          : 'bg-card border border-border text-foreground rounded-tl-none shadow-sm'
+                          ? 'bg-primary text-white rounded-tr-none' 
+                          : 'bg-white border border-slate-200 text-foreground rounded-tl-none shadow-sm'
                       }`}>
                         {msg.role === 'assistant' && !msg.content ? (
                           <div className="flex gap-1.5 py-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: '300ms' }} />
                           </div>
                         ) : (
                           <div className="markdown-content prose-sm prose-emerald dark:prose-invert">
@@ -365,12 +365,12 @@ I'm ready to dive into your specific holdings—just ask!`
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask your co-pilot..."
-                  className="h-14 pl-5 pr-14 rounded-2xl border-border/50 focus:border-emerald-500/50 focus:ring-emerald-500/10"
+                  className="h-14 pl-5 pr-14 rounded-2xl border-slate-200 focus:border-primary/50 focus:ring-primary/10"
                   disabled={isLoading}
                 />
                 <Button
                   size="icon"
-                  className="absolute right-2 top-2 h-10 w-10 rounded-xl bg-emerald-600 hover:bg-emerald-700"
+                  className="absolute right-2 top-2 h-10 w-10 rounded-xl bg-primary hover:bg-primary/90"
                   disabled={!input.trim() || isLoading}
                   onClick={() => sendMessage(input)}
                 >

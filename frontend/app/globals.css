@@ -6,60 +6,60 @@
    ============================================ */
 
 @theme {
-  /* Core Background - Deep Space Navy */
-  --color-background: #060a14;
-  --color-foreground: #e8edf5;
+  /* Core Background - Clean Professional White */
+  --color-background: #ffffff;
+  --color-foreground: #0f172a;
 
-  /* Card System */
-  --color-card: #0e1422;
-  --color-card-foreground: #e8edf5;
+  /* Card System - Subtle Glass & Soft Shadows */
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
 
-  /* Primary - Electric Indigo (differentiated from emerald) */
-  --color-primary: #6366f1;
+  /* Primary - Professional Blue */
+  --color-primary: #2563eb;
   --color-primary-foreground: #ffffff;
 
   /* Secondary */
-  --color-secondary: #141c2e;
-  --color-secondary-foreground: #94a3b8;
+  --color-secondary: #f1f5f9;
+  --color-secondary-foreground: #475569;
 
   /* Muted */
-  --color-muted: #141c2e;
+  --color-muted: #f8fafc;
   --color-muted-foreground: #64748b;
 
-  /* Accent - Cyan for data/charts */
-  --color-accent: #22d3ee;
-  --color-accent-foreground: #0c4a6e;
+  /* Accent - Indigo */
+  --color-accent: #6366f1;
+  --color-accent-foreground: #ffffff;
 
   /* Utility */
-  --color-destructive: #f43f5e;
-  --color-destructive-foreground: #fff1f2;
-  --color-border: #1a2438;
-  --color-input: #141c2e;
-  --color-ring: #6366f1;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #fef2f2;
+  --color-border: #e2e8f0;
+  --color-input: #f8fafc;
+  --color-ring: #3b82f6;
 
   /* Sidebar */
-  --color-sidebar: #060a14;
-  --color-sidebar-foreground: #64748b;
-  --color-sidebar-border: #1a2438;
-  --color-sidebar-accent: #6366f1;
+  --color-sidebar: #ffffff;
+  --color-sidebar-foreground: #475569;
+  --color-sidebar-border: #e2e8f0;
+  --color-sidebar-accent: #3b82f6;
   --color-sidebar-accent-foreground: #ffffff;
 
-  /* Chart Colors - Premium Palette */
-  --color-chart-1: #6366f1;
-  --color-chart-2: #22d3ee;
-  --color-chart-3: #a78bfa;
-  --color-chart-4: #34d399;
-  --color-chart-5: #f59e0b;
+  /* Chart Colors - Fresh Palette */
+  --color-chart-1: #2563eb;
+  --color-chart-2: #10b981;
+  --color-chart-3: #f59e0b;
+  --color-chart-4: #8b5cf6;
+  --color-chart-5: #ef4444;
 
   /* Radius */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
 
   /* Fonts */
-  --font-sans: var(--font-sans), 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-sans), 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono), 'JetBrains Mono', ui-monospace, monospace;
 }
 
@@ -70,8 +70,9 @@
 }
 
 html, body {
-  height: 100%;
+  min-height: 100%;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
 body {
@@ -81,9 +82,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(34, 211, 238, 0.05) 0px, transparent 50%);
-  background-attachment: fixed;
+    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.03) 0px, transparent 50%);
 }
 
 /* ============ SCROLLBAR ============ */
