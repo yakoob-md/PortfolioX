@@ -61,48 +61,48 @@ export default function FundSearchInput({ onSelect }: Props) {
   return (
     <div className="relative w-full" ref={dropdownRef}>
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
         <input
           ref={inputRef} type="text" value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Search mutual funds (e.g. Parag Parikh, HDFC...)"
-          className="w-full bg-[#0a0f1e] border border-[#1e293b] rounded-lg py-3.5 pl-11 pr-10 text-sm text-slate-200 placeholder:text-slate-600 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all duration-200"
+          className="w-full bg-card border border-border rounded-lg py-3.5 pl-11 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-200"
           onFocus={() => query.length >= 2 && setShowDropdown(true)}
         />
         {loading ? (
-          <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-400 w-4 h-4 animate-spin" />
+          <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-primary w-4 h-4 animate-spin" />
         ) : query.length > 0 ? (
-          <button onClick={() => { setQuery(''); setResults([]); setShowDropdown(false); inputRef.current?.focus(); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-300 transition-colors">✕</button>
+          <button onClick={() => { setQuery(''); setResults([]); setShowDropdown(false); inputRef.current?.focus(); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">✕</button>
         ) : null}
       </div>
 
       {showDropdown && results.length > 0 && (
-        <div className="absolute z-50 w-full mt-2 bg-[#111827] border border-[#1e293b] rounded-xl shadow-2xl shadow-black/40 max-h-80 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl max-h-80 overflow-y-auto">
           {results.map((fund, idx) => (
             <button key={fund.scheme_code}
               onClick={() => { onSelect(fund); setQuery(''); setShowDropdown(false); }}
               onMouseEnter={() => setSelectedIndex(idx)}
-              className={`w-full text-left px-4 py-3 transition-colors border-b border-[#1e293b] last:border-0 flex items-center justify-between group ${idx === selectedIndex ? 'bg-emerald-500/[0.06]' : 'hover:bg-white/[0.02]'}`}
+              className={`w-full text-left px-4 py-3 transition-colors border-b border-border last:border-0 flex items-center justify-between group ${idx === selectedIndex ? 'bg-primary/5' : 'hover:bg-muted/50'}`}
             >
               <div className="flex-1 pr-4 min-w-0">
-                <div className="font-semibold text-sm text-slate-200 group-hover:text-emerald-400 transition-colors truncate">{fund.scheme_name}</div>
-                <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-1 flex-wrap">
-                  <span>{fund.amc_name}</span><span className="text-slate-700">•</span>
-                  <span className={fund.plan_type === 'Direct' ? 'text-emerald-400' : 'text-amber-400'}>{fund.plan_type}</span>
-                  <span className="text-slate-700">•</span>
+                <div className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">{fund.scheme_name}</div>
+                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span>{fund.amc_name}</span><span className="text-muted-foreground/50">•</span>
+                  <span className={fund.plan_type === 'Direct' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}>{fund.plan_type}</span>
+                  <span className="text-muted-foreground/50">•</span>
                   <span className="data-value">₹{fund.nav}</span>
                 </div>
               </div>
-              <Plus className={`w-4 h-4 flex-shrink-0 transition-colors ${idx === selectedIndex ? 'text-emerald-400' : 'text-slate-600 group-hover:text-emerald-400'}`} />
+              <Plus className={`w-4 h-4 flex-shrink-0 transition-colors ${idx === selectedIndex ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
             </button>
           ))}
         </div>
       )}
 
       {showDropdown && results.length === 0 && !loading && query.length >= 2 && (
-        <div className="absolute z-50 w-full mt-2 bg-[#111827] border border-[#1e293b] rounded-xl shadow-2xl p-6 text-center">
-          <p className="text-sm text-slate-500">No funds found for &ldquo;{query}&rdquo;</p>
+        <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl p-6 text-center">
+          <p className="text-sm text-muted-foreground">No funds found for &ldquo;{query}&rdquo;</p>
         </div>
       )}
     </div>

@@ -8,7 +8,7 @@ const Tabs = TabsPrimitive.Root;
 
 const TabsList = React.forwardRef<React.ComponentRef<typeof TabsPrimitive.List>, React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>>(
     ({ className, ...props }, ref) => (
-        <TabsPrimitive.List ref={ref} className={cn("inline-flex h-11 items-center gap-1 rounded-lg bg-[#0a0f1e] p-1 text-slate-400 border border-[#1e293b]", className)} {...props} />
+        <TabsPrimitive.List ref={ref} className={cn("inline-flex h-11 items-center gap-1 rounded-lg bg-muted/50 p-1 text-muted-foreground border border-border", className)} {...props} />
     )
 );
 TabsList.displayName = TabsPrimitive.List.displayName;
@@ -19,8 +19,8 @@ const TabsTrigger = React.forwardRef<React.ComponentRef<typeof TabsPrimitive.Tri
             "inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-all duration-200",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40",
             "disabled:pointer-events-none disabled:opacity-50",
-            "data-[state=active]:bg-[#111827] data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm",
-            "hover:text-slate-200", className
+            "data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm",
+            "hover:text-foreground", className
         )} {...props} />
     )
 );

@@ -23,36 +23,36 @@ export default function PortfolioBuilder({ funds, onUpdateUnits, onRemove }: Pro
       <div className="flex items-center justify-between px-1">
         <div className="section-label">Your Selection ({funds.length})</div>
         {totalValue > 0 && (
-          <div className="text-sm text-slate-400">Total Value: <span className="font-semibold text-emerald-400 data-value">{formatCurrency(totalValue)}</span></div>
+          <div className="text-sm text-muted-foreground">Total Value: <span className="font-semibold text-emerald-600 dark:text-emerald-400 data-value">{formatCurrency(totalValue)}</span></div>
         )}
       </div>
       <div className="space-y-3">
         {funds.map((fund, index) => (
-          <div key={fund.scheme_code} className="bg-[#111827] border border-[#1e293b] rounded-xl p-4 hover:border-[#253044] transition-all duration-200 animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+          <div key={fund.scheme_code} className="bg-card border border-border rounded-xl p-4 hover:border-primary/30 transition-all duration-200 animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm text-slate-100 leading-tight truncate">{fund.scheme_name}</div>
-                <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-500">
+                <div className="font-semibold text-sm text-foreground leading-tight truncate">{fund.scheme_name}</div>
+                <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground">
                   <span className="uppercase font-semibold tracking-wide">{fund.amc_name}</span>
-                  <span className="text-slate-700">•</span>
+                  <span className="text-muted-foreground/50">•</span>
                   <span className={fund.plan_type === 'Direct' ? 'badge-direct' : 'badge-regular'}>{fund.plan_type}</span>
-                  <span className="text-slate-700">•</span>
+                  <span className="text-muted-foreground/50">•</span>
                   <span className="data-value">NAV: ₹{fund.nav}</span>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 px-1">Units</label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">Units</label>
                   <input type="number" value={fund.units || ''} onChange={(e) => onUpdateUnits(fund.scheme_code, parseFloat(e.target.value) || 0)} placeholder="0.00"
-                    className="bg-[#0a0f1e] border border-[#1e293b] rounded-lg px-3 py-2 w-28 text-sm data-value text-slate-200 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 outline-none transition-all" />
+                    className="bg-muted/30 border border-border rounded-lg px-3 py-2 w-28 text-sm data-value text-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all" />
                 </div>
                 <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 px-1">Value</label>
-                  <div className="bg-[#0a0f1e] border border-transparent px-3 py-2 w-32 text-sm data-value text-emerald-400 rounded-lg">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">Value</label>
+                  <div className="bg-muted/30 border border-transparent px-3 py-2 w-32 text-sm data-value text-emerald-600 dark:text-emerald-400 rounded-lg">
                     {formatCurrency((fund.nav || 0) * (fund.units || 0))}
                   </div>
                 </div>
-                <button onClick={() => onRemove(fund.scheme_code)} className="mt-5 p-2 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/[0.06] transition-all duration-200" aria-label="Remove fund">
+                <button onClick={() => onRemove(fund.scheme_code)} className="mt-5 p-2 rounded-lg text-muted-foreground hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/[0.06] transition-all duration-200" aria-label="Remove fund">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

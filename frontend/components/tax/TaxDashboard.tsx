@@ -45,14 +45,14 @@ export default function TaxDashboard({ result }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column - Detailed Breakdown & Optimization */}
         <div className="lg:col-span-8 space-y-8">
-          <Card className="overflow-hidden border-[#1e293b]">
+          <Card className="overflow-hidden">
             <Tabs defaultValue="summary" className="w-full">
-              <div className="border-b border-[#1e293b] px-6 pt-4">
+              <div className="border-b border-border px-6 pt-4">
                 <TabsList className="bg-transparent border-0 p-0 h-auto gap-8">
-                  <TabsTrigger value="summary" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-400 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-emerald-400 px-0 pb-4 text-xs font-bold uppercase tracking-widest">
+                  <TabsTrigger value="summary" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary px-0 pb-4 text-xs font-bold uppercase tracking-widest">
                     <PieIcon className="w-3.5 h-3.5 mr-2" /> Tax Summary
                   </TabsTrigger>
-                  <TabsTrigger value="details" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-400 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-emerald-400 px-0 pb-4 text-xs font-bold uppercase tracking-widest">
+                  <TabsTrigger value="details" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary px-0 pb-4 text-xs font-bold uppercase tracking-widest">
                     <ListIcon className="w-3.5 h-3.5 mr-2" /> Transaction Gains
                   </TabsTrigger>
                 </TabsList>
@@ -83,12 +83,12 @@ export default function TaxDashboard({ result }: Props) {
                             <Cell fill="#3b82f6" />
                             <Cell fill="#ef4444" />
                           </Pie>
-                          <Tooltip contentStyle={{ background: '#111827', border: '1px solid #1e293b', borderRadius: '8px' }} />
+                          <Tooltip contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '12px', color: 'var(--color-card-foreground)' }} itemStyle={{ color: 'var(--color-muted-foreground)' }} labelStyle={{ color: 'var(--color-foreground)', fontWeight: 600 }} />
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.1em]">Total Tax</span>
-                        <span className="text-3xl font-black text-slate-100 data-value">₹{result.total_tax.toLocaleString()}</span>
+                        <span className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.1em]">Total Tax</span>
+                        <span className="text-3xl font-black text-foreground data-value">₹{result.total_tax.toLocaleString()}</span>
                       </div>
                     </div>
                     
@@ -119,12 +119,12 @@ export default function TaxDashboard({ result }: Props) {
                     </div>
                   </div>
 
-                  <div className="p-6 rounded-2xl bg-emerald-500/[0.04] border border-emerald-500/10">
-                    <h4 className="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <div className="p-6 rounded-2xl bg-emerald-50 dark:bg-emerald-500/[0.04] border border-emerald-200 dark:border-emerald-500/10">
+                    <h4 className="text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
                       <Target className="w-3.5 h-3.5" />
                       LTCG Optimization Strategy
                     </h4>
-                    <p className="text-slate-400 text-sm leading-relaxed">
+                    <p className="text-emerald-600 dark:text-muted-foreground text-sm leading-relaxed">
                       {result.ltcg_optimization.suggested_action}
                     </p>
                   </div>
@@ -135,31 +135,31 @@ export default function TaxDashboard({ result }: Props) {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
-                      <tr className="text-slate-500 border-b border-[#1e293b] bg-[#0a0f1e]/30">
+                      <tr className="text-muted-foreground border-b border-border bg-muted/30">
                         <th className="py-4 px-8 text-[10px] font-bold uppercase tracking-wider">Scheme / Dates</th>
                         <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-wider">Type</th>
                         <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-wider text-right">Units</th>
                         <th className="py-4 px-8 text-[10px] font-bold uppercase tracking-wider text-right">Gain/Loss</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#1e293b]">
+                    <tbody className="divide-y divide-border">
                       {result.gain_entries.map((entry: any, i: number) => (
-                        <tr key={i} className="group hover:bg-white/[0.015] transition-colors">
+                        <tr key={i} className="group hover:bg-muted/30 transition-colors">
                           <td className="py-5 px-8">
-                            <div className="font-semibold text-slate-200 text-sm line-clamp-1">{entry.scheme_name}</div>
-                            <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-2">
+                            <div className="font-semibold text-foreground text-sm line-clamp-1">{entry.scheme_name}</div>
+                            <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-2">
                               <span className="data-value">{new Date(entry.purchase_date).toLocaleDateString()}</span>
                               <ArrowRight className="w-2.5 h-2.5" />
                               <span className="data-value">{new Date(entry.redemption_date).toLocaleDateString()}</span>
                             </div>
                           </td>
                           <td className="py-5 px-4">
-                            <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-bold uppercase tracking-wider ${entry.gain_type === 'LTCG' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>
+                            <span className={`px-2 py-0.5 rounded-[4px] text-[10px] font-bold uppercase tracking-wider ${entry.gain_type === 'LTCG' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20' : 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-500/20'}`}>
                               {entry.gain_type}
                             </span>
                           </td>
-                          <td className="py-5 px-4 text-right font-mono text-xs text-slate-400 data-value">{entry.units.toFixed(3)}</td>
-                          <td className={`py-5 px-8 text-right font-mono font-bold text-sm data-value ${entry.gain_amount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          <td className="py-5 px-4 text-right font-mono text-xs text-muted-foreground data-value">{entry.units.toFixed(3)}</td>
+                          <td className={`py-5 px-8 text-right font-mono font-bold text-sm data-value ${entry.gain_amount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                             {entry.gain_amount >= 0 ? '+' : ''}₹{entry.gain_amount.toLocaleString()}
                           </td>
                         </tr>
@@ -174,44 +174,44 @@ export default function TaxDashboard({ result }: Props) {
 
         {/* Right Column - Savings & Tools */}
         <div className="lg:col-span-4 space-y-6">
-          <Card className="bg-orange-500/[0.02] border-orange-500/10 p-6">
-            <h3 className="text-xs font-bold text-orange-400 uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
+          <Card className="bg-orange-50 dark:bg-orange-500/[0.02] border-orange-200 dark:border-orange-500/10 p-6">
+            <h3 className="text-xs font-bold text-orange-700 dark:text-orange-400 uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
               <TrendingDown className="w-4 h-4" />
               Tax Harvesting
             </h3>
-            <p className="text-slate-500 text-xs leading-relaxed mb-6">
+            <p className="text-muted-foreground text-xs leading-relaxed mb-6">
               The following funds have unrealized losses. Redeeming them now can offset your capital gains and reduce your tax bill.
             </p>
             
             <div className="space-y-4">
               {result.harvesting_opportunities.map((opp: any, i: number) => (
-                <div key={i} className="p-4 rounded-xl bg-[#0a0f1e] border border-[#1e293b] hover:border-orange-500/20 transition-colors group">
-                  <div className="text-xs font-bold text-slate-300 mb-3 truncate group-hover:text-slate-100 transition-colors">{opp.scheme_name}</div>
+                <div key={i} className="p-4 rounded-xl bg-card border border-border hover:border-orange-500/20 transition-colors group">
+                  <div className="text-xs font-bold text-foreground mb-3 truncate group-hover:text-primary transition-colors">{opp.scheme_name}</div>
                   <div className="flex justify-between items-end">
                     <div>
-                      <div className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider mb-1">Unrealized Loss</div>
-                      <div className="text-red-400 font-bold text-sm data-value">₹{opp.unrealized_loss.toLocaleString()}</div>
+                      <div className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Unrealized Loss</div>
+                      <div className="text-red-600 dark:text-red-400 font-bold text-sm data-value">₹{opp.unrealized_loss.toLocaleString()}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider mb-1">Tax Savings</div>
-                      <div className="text-emerald-400 font-bold text-sm data-value">₹{opp.potential_tax_savings.toLocaleString()}</div>
+                      <div className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1">Tax Savings</div>
+                      <div className="text-emerald-600 dark:text-emerald-400 font-bold text-sm data-value">₹{opp.potential_tax_savings.toLocaleString()}</div>
                     </div>
                   </div>
                 </div>
               ))}
               {result.harvesting_opportunities.length === 0 && (
-                <div className="text-center py-10 bg-[#0a0f1e]/50 rounded-xl border border-dashed border-[#1e293b]">
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/[0.08] flex items-center justify-center mx-auto mb-3">
-                    <CheckCircle2 className="text-emerald-400 w-5 h-5" />
+                <div className="text-center py-10 bg-muted/50 rounded-xl border border-dashed border-border">
+                  <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/[0.08] flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle2 className="text-emerald-600 dark:text-emerald-400 w-5 h-5" />
                   </div>
-                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">No harvesting needed</p>
+                  <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider">No harvesting needed</p>
                 </div>
               )}
             </div>
           </Card>
 
-          <Card className="border-[#1e293b] bg-transparent p-6">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-6">Tax Rules Reference</h3>
+          <Card className="border-border bg-transparent p-6">
+            <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-6">Tax Rules Reference</h3>
             <div className="space-y-5">
               <RuleItem label="Equity STCG" desc="20% tax if sold within 12 months" color="orange" />
               <RuleItem label="Equity LTCG" desc="12.5% tax after ₹1.25L exemption (12+ months)" color="blue" />
@@ -219,7 +219,7 @@ export default function TaxDashboard({ result }: Props) {
             <a 
               href="https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1" 
               target="_blank"
-              className="mt-8 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-emerald-500 transition-colors group"
+              className="mt-8 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors group"
             >
               Read Official Tax Laws
               <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -233,30 +233,30 @@ export default function TaxDashboard({ result }: Props) {
 
 function SummaryCard({ label, value, subtitle, progress, icon, accent }: any) {
   const accentColors: any = {
-    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    orange: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+    emerald: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+    blue: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
+    orange: 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/20',
   };
 
   return (
-    <Card className="p-6 border-[#1e293b] relative overflow-hidden group">
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-700/0 to-transparent group-hover:via-emerald-500/30 transition-all duration-500" />
+    <Card className="p-6 border-border relative overflow-hidden group">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-muted/0 to-transparent group-hover:via-primary/30 transition-all duration-500" />
       <div className="flex justify-between items-start mb-4">
         <div className={`p-2 rounded-lg border ${accentColors[accent]}`}>
           {icon}
         </div>
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</span>
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{label}</span>
       </div>
-      <div className="text-3xl font-black text-slate-100 data-value">{value}</div>
+      <div className="text-3xl font-black text-foreground data-value">{value}</div>
       {progress !== undefined && (
-        <div className="w-full bg-[#0a0f1e] h-1.5 rounded-full mt-5 overflow-hidden">
+        <div className="w-full bg-muted h-1.5 rounded-full mt-5 overflow-hidden">
           <div 
             className={`h-full transition-all duration-1000 ${accent === 'blue' ? 'bg-blue-500' : 'bg-emerald-500'}`}
             style={{ width: `${Math.min(progress, 100)}%` }}
           />
         </div>
       )}
-      <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mt-3">{subtitle}</p>
+      <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider mt-3">{subtitle}</p>
     </Card>
   );
 }
@@ -269,17 +269,17 @@ function BreakdownCard({ label, tax, amount, rate, color }: any) {
   };
 
   return (
-    <div className="flex items-center justify-between p-4 rounded-xl bg-[#0a0f1e] border border-[#1e293b] hover:border-slate-700 transition-colors">
+    <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:border-muted-foreground/30 transition-colors">
       <div className="flex items-center gap-4">
         <div className={`w-2 h-2 rounded-full ${colors[color]}`} />
         <div>
-          <div className="text-xs font-bold text-slate-200">{label}</div>
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider">Taxed at {rate}</div>
+          <div className="text-xs font-bold text-foreground">{label}</div>
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Taxed at {rate}</div>
         </div>
       </div>
       <div className="text-right">
-        <div className="text-sm font-bold text-slate-100 data-value">{tax}</div>
-        <div className="text-[10px] text-slate-500 data-value">{amount}</div>
+        <div className="text-sm font-bold text-foreground data-value">{tax}</div>
+        <div className="text-[10px] text-muted-foreground data-value">{amount}</div>
       </div>
     </div>
   );
@@ -287,8 +287,8 @@ function BreakdownCard({ label, tax, amount, rate, color }: any) {
 
 function RuleItem({ label, desc, color }: any) {
   const colors: any = {
-    orange: 'bg-orange-500/10 text-orange-400',
-    blue: 'bg-blue-500/10 text-blue-400',
+    orange: 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400',
+    blue: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400',
   };
 
   return (
@@ -297,8 +297,8 @@ function RuleItem({ label, desc, color }: any) {
         <IndianRupee className="w-3.5 h-3.5" />
       </div>
       <div>
-        <div className="text-xs font-bold text-slate-300">{label}</div>
-        <div className="text-[10px] text-slate-500 leading-relaxed mt-0.5">{desc}</div>
+        <div className="text-xs font-bold text-foreground">{label}</div>
+        <div className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">{desc}</div>
       </div>
     </div>
   );

@@ -47,24 +47,24 @@ export default function PortfolioImport({ onImport }: Props) {
       
       <div 
         onClick={() => fileInputRef.current?.click()}
-        className="group flex items-center justify-between p-4 bg-[#0a0f1e] border border-dashed border-[#1e293b] hover:border-emerald-500/40 rounded-xl cursor-pointer transition-all"
+        className="group flex items-center justify-between p-4 bg-muted/30 border border-dashed border-border hover:border-primary/40 rounded-xl cursor-pointer transition-all"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-500/5 flex items-center justify-center group-hover:bg-emerald-500/10 transition-colors">
-            {loading ? <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" /> : <Upload className="w-5 h-5 text-slate-400 group-hover:text-emerald-400" />}
+          <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+            {loading ? <Loader2 className="w-5 h-5 text-primary animate-spin" /> : <Upload className="w-5 h-5 text-muted-foreground group-hover:text-primary" />}
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors">Bulk Import from CSV</div>
-            <div className="text-[10px] text-slate-500 font-medium">Format: stock_name, holding_percentage, sector, market_cap</div>
+            <div className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">Bulk Import from CSV</div>
+            <div className="text-[10px] text-muted-foreground font-medium">Format: stock_name, holding_percentage, sector, market_cap</div>
           </div>
         </div>
         
-        {success && <Check className="w-5 h-5 text-emerald-400" />}
-        {error && <AlertCircle className="w-5 h-5 text-red-400" />}
+        {success && <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
+        {error && <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />}
       </div>
       
       {error && (
-        <div className="mt-2 text-xs text-red-400 flex items-center gap-1.5 px-2">
+        <div className="mt-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-1.5 px-2">
           <X className="w-3 h-3" /> {error}
         </div>
       )}
