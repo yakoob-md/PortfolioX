@@ -2,7 +2,7 @@
 
 import { useFundStore, type HoldingData } from '@/lib/store'
 import { formatCurrency } from '@/lib/helpers'
-import { Download, Upload, Link, Copy, FileJson, FileSpreadsheet, Check, AlertTriangle, Eye, X } from 'lucide-react'
+import { Download, Upload, Link, Copy, FileJson, FileSpreadsheet, Check, AlertTriangle, Eye, X, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -139,6 +139,76 @@ export default function PortfolioExport() {
     } catch {
       toast.error('Failed to create share link')
     }
+  }, [holdings])
+
+  // Export as PDF (print-friendly report)
+  const exportPdf = useCallback(() => {
+    if (holdings.length === 0) {
+      toast.error('No holdings to export')
+      return
+    }
+
+    const totalInvested = holdings.reduce((s, h) => s + h.investedAmount, 0)
+    const totalCurrent = holdings.reduce((s, h) => s + h.currentAmount, 0)
+    const totalGain = totalCurrent - totalInvested
+    const gainPct = totalInvested > 0 ? ((totalGain / totalInvested) * 100).toFixed(2) : '0.00'
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      toast.error('Pop-up blocked. Please allow pop-ups for this site.')
+      return
+    }
+
+    const holdingsRows = holdings.map(h => {
+      const gain = h.currentAmount - h.investedAmount
+      const gainP = h.investedAmount > 0 ? ((gain / h.investedAmount) * 100).toFixed(2) : '0.00'
+      return `<tr>
+        <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${h.fund.schemeName}</td>
+        <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-size:12px;text-transform:capitalize;">${h.planType}</td>
+        <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-size:12px;text-align:right;">₹${h.investedAmount.toLocaleString('en-IN')}</td>
+        <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-size:12px;text-align:right;">₹${h.currentAmount.toLocaleString('en-IN')}</td>
+        <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-size:12px;text-align:right;color:${gain >= 0 ? '#10b981' : '#ef4444'};">${gain >= 0 ? '+' : ''}₹${gain.toLocaleString('en-IN')} (${gainP}%)</td>
+      </tr>`
+    }).join('')
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>PortfolioX Report - ${new Date().toLocaleDateString()}</title>
+      <style>
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:40px;color:#0f172a;line-height:1.6}
+        .header{border-bottom:2px solid #2563eb;padding-bottom:16px;margin-bottom:24px}
+        .header h1{margin:0;font-size:24px;color:#2563eb}
+        .header p{margin:4px 0 0;color:#64748b;font-size:14px}
+        .summary{display:flex;gap:24px;margin-bottom:24px}
+        .summary-card{flex:1;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
+        .summary-card label{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;font-weight:600}
+        .summary-card .value{font-size:20px;font-weight:700;margin-top:4px}
+        table{width:100%;border-collapse:collapse;margin-top:16px}
+        th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;padding:8px;border-bottom:2px solid #e2e8f0}
+        th:last-child,td:last-child{text-align:right}
+        .footer{margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:center}
+        @media print{body{margin:20px}.summary{flex-wrap:wrap}}
+      </style></head><body>
+      <div class="header">
+        <h1>PortfolioX — Portfolio Report</h1>
+        <p>Generated on ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} · ${holdings.length} holdings</p>
+      </div>
+      <div class="summary">
+        <div class="summary-card"><label>Total Invested</label><div class="value">₹${totalInvested.toLocaleString('en-IN')}</div></div>
+        <div class="summary-card"><label>Current Value</label><div class="value">₹${totalCurrent.toLocaleString('en-IN')}</div></div>
+        <div class="summary-card"><label>Total Gain/Loss</label><div class="value" style="color:${totalGain >= 0 ? '#10b981' : '#ef4444'}">${totalGain >= 0 ? '+' : ''}₹${totalGain.toLocaleString('en-IN')} (${gainPct}%)</div></div>
+      </div>
+      <h2 style="font-size:16px;margin-bottom:8px;">Holdings Detail</h2>
+      <table><thead><tr>
+        <th>Fund Name</th><th>Plan</th><th>Invested</th><th>Current</th><th>Gain/Loss</th>
+      </tr></thead><tbody>${holdingsRows}</tbody></table>
+      <div class="footer">
+        <p>PortfolioX — India's Mutual Fund Intelligence Platform</p>
+        <p>This report is for informational purposes only and does not constitute investment advice.</p>
+      </div>
+      </body></html>`)
+    printWindow.document.close()
+    printWindow.focus()
+    setTimeout(() => { printWindow.print() }, 250)
+    toast.success('PDF report opened in new window')
   }, [holdings])
 
   // Parse and preview import data
@@ -302,6 +372,10 @@ export default function PortfolioExport() {
               <Button onClick={exportCsv} disabled={holdings.length === 0} variant="outline" className="gap-2">
                 <FileSpreadsheet className="h-4 w-4" />
                 Export as CSV
+              </Button>
+              <Button onClick={exportPdf} disabled={holdings.length === 0} variant="outline" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Export as PDF
               </Button>
               <Button onClick={shareLink} disabled={holdings.length === 0} variant="outline" className="gap-2">
                 {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}

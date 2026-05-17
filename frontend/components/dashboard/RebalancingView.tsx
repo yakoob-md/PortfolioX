@@ -13,7 +13,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   PieChart as PieChartIcon, Target, AlertTriangle, ArrowRight, ArrowLeftRight,
-  TrendingUp, Shield, ShieldCheck, ShieldAlert, RefreshCw, Briefcase, Loader2,
+  TrendingUp, Shield, ShieldCheck, ShieldAlert, Briefcase,
   BarChart3,
 } from 'lucide-react'
 import {
@@ -326,10 +326,9 @@ function DriftBar({ current, target, category }: { current: number; target: numb
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function RebalancingView() {
-  const { holdings, fetchHoldings, sessionId, setActiveTab } = useFundStore()
+  const { holdings, fetchHoldings, setActiveTab } = useFundStore()
 
   const [riskProfile, setRiskProfile] = useState<RiskProfile>('moderate')
-  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     fetchHoldings()
@@ -415,28 +414,6 @@ export default function RebalancingView() {
     }
   }, [holdings, totalPortfolio, target])
 
-  // ─── API refresh ────────────────────────────────────────────────────────────
-  const refreshFromApi = async () => {
-    if (holdings.length === 0) return
-    setLoading(true)
-    try {
-      const res = await fetch('/api/portfolio/rebalancing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          targetAllocation: target,
-        }),
-      })
-      if (res.ok) {
-        await res.json()
-      }
-    } catch {
-      // Client-side fallback is already active
-    }
-    setLoading(false)
-  }
-
   // ─── Empty state ────────────────────────────────────────────────────────────
   if (holdings.length === 0) {
     return (
@@ -488,16 +465,6 @@ export default function RebalancingView() {
               <SelectItem value="aggressive">Aggressive</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5 text-xs"
-            onClick={refreshFromApi}
-            disabled={loading}
-          >
-            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-            Refresh
-          </Button>
           <Badge variant="outline" className="text-xs">
             {formatCurrency(totalPortfolio)}
           </Badge>

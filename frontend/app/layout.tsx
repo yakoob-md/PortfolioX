@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Geist } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "next-themes";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -38,19 +39,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geist.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased dark`}>
+    <html lang="en" className={`${geist.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        {children}
-        <Toaster 
-          position="bottom-right"
-          toastOptions={{
-            style: {
-              background: '#111827',
-              border: '1px solid #1e293b',
-              color: '#e2e8f0',
-            }
-          }}
-        />
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+          {children}
+          <Toaster 
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                background: 'hsl(var(--card))',
+                border: '1px solid hsl(var(--border))',
+                color: 'hsl(var(--card-foreground))',
+              }
+            }}
+          />
+        </ThemeProvider>
       </body>
     </html>
   );

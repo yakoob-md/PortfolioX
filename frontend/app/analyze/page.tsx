@@ -21,13 +21,12 @@ export default function AnalyzePage() {
   };
 
   const handleImport = (holdings: Holding[]) => {
-    // Generate a unique code for the imported fund
     const code = `CUSTOM_${Date.now()}`;
     const newFund = {
       scheme_code: code,
       scheme_name: 'Imported Portfolio',
       amc_name: 'User Defined',
-      units: 1, // Treat imported as 1 unit of value
+      units: 1,
       nav: 0,
       custom_holdings: holdings
     };
@@ -63,18 +62,18 @@ export default function AnalyzePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0f1e] flex flex-col items-center justify-center p-8 text-center">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8 text-center">
         <div className="relative">
-          <div className="w-20 h-20 rounded-full border-2 border-[#1e293b] flex items-center justify-center">
-            <Loader2 className="w-10 h-10 text-emerald-400 animate-spin" />
+          <div className="w-20 h-20 rounded-full border-2 border-border flex items-center justify-center">
+            <Loader2 className="w-10 h-10 text-primary animate-spin" />
           </div>
-          <div className="absolute -inset-4 rounded-full border border-emerald-500/10 animate-ping" />
+          <div className="absolute -inset-4 rounded-full border border-primary/10 animate-ping" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-100 mt-8 mb-2">Analyzing Your Portfolio</h2>
-        <p className="text-slate-400 text-sm max-w-xs">Computing overlap matrices, sector exposure, and health scores...</p>
+        <h2 className="text-2xl font-bold text-foreground mt-8 mb-2">Analyzing Your Portfolio</h2>
+        <p className="text-muted-foreground text-sm max-w-xs">Computing overlap matrices, sector exposure, and health scores...</p>
         <div className="mt-6 flex gap-1">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="w-2 h-2 rounded-full bg-emerald-500/40 animate-pulse-subtle" style={{ animationDelay: `${i * 0.3}s` }} />
+            <div key={i} className="w-2 h-2 rounded-full bg-primary/40 animate-pulse-subtle" style={{ animationDelay: `${i * 0.3}s` }} />
           ))}
         </div>
       </div>
@@ -83,18 +82,18 @@ export default function AnalyzePage() {
 
   if (result) {
     return (
-      <div className="min-h-screen bg-[#0a0f1e] text-slate-200">
-        <header className="sticky top-0 z-50 border-b border-[#1e293b] bg-[#0a0f1e]/80 backdrop-blur-xl">
+      <div className="min-h-screen bg-background text-foreground">
+        <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-emerald-400" />
+              <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-primary" />
               </div>
-              <span className="text-lg font-bold tracking-tight text-slate-100">Portfolio<span className="text-emerald-400">X</span></span>
-              <span className="hidden sm:inline text-slate-600 mx-2">|</span>
-              <span className="hidden sm:inline text-sm text-slate-500 font-medium">Analysis Report</span>
+              <span className="text-lg font-bold tracking-tight text-foreground">Portfolio<span className="text-primary">X</span></span>
+              <span className="hidden sm:inline text-muted-foreground mx-2">|</span>
+              <span className="hidden sm:inline text-sm text-muted-foreground font-medium">Analysis Report</span>
             </div>
-            <button onClick={() => setResult(null)} className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-100 font-medium transition-colors">
+            <button onClick={() => setResult(null)} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground font-medium transition-colors">
               <ArrowLeft className="w-4 h-4" /> Back to Input
             </button>
           </div>
@@ -107,31 +106,31 @@ export default function AnalyzePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0f1e] text-slate-200">
-      <header className="sticky top-0 z-50 border-b border-[#1e293b] bg-[#0a0f1e]/80 backdrop-blur-xl">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto flex items-center justify-between px-6 h-16">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-emerald-400" />
+            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-primary" />
             </div>
-            <span className="text-lg font-bold tracking-tight text-slate-100">Portfolio<span className="text-emerald-400">X</span></span>
+            <span className="text-lg font-bold tracking-tight text-foreground">Portfolio<span className="text-primary">X</span></span>
           </div>
-          <Link href="/" className="text-sm text-slate-400 hover:text-slate-100 font-medium transition-colors">Home</Link>
+          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground font-medium transition-colors">Home</Link>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-12 animate-fade-in">
         <div className="mb-10">
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-emerald-400" />
-            <span className="text-xs font-bold text-emerald-400 uppercase tracking-[0.15em]">Portfolio Builder</span>
+            <Sparkles className="w-5 h-5 text-primary" />
+            <span className="text-xs font-bold text-primary uppercase tracking-[0.15em]">Portfolio Builder</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-slate-100 tracking-tight mb-3">Build Your Portfolio</h1>
-          <p className="text-slate-400 text-base leading-relaxed max-w-xl">Add at least 2 funds you hold and specify units to discover hidden overlaps, sector concentration, and cost leakages.</p>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight mb-3">Build Your Portfolio</h1>
+          <p className="text-muted-foreground text-base leading-relaxed max-w-xl">Add at least 2 funds you hold and specify units to discover hidden overlaps, sector concentration, and cost leakages.</p>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-[#111827] border border-[#1e293b] rounded-xl p-5">
+          <div className="bg-card border border-border rounded-xl p-5">
             <div className="section-label mb-3">Add Fund</div>
             <FundSearchInput onSelect={handleAddFund} />
             <PortfolioImport onImport={handleImport} />
@@ -141,13 +140,13 @@ export default function AnalyzePage() {
             <button
               onClick={handleAnalyze}
               disabled={selectedFunds.length < 2 || selectedFunds.some(f => f.units <= 0)}
-              className="inline-flex items-center justify-center gap-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:bg-[#1e293b] disabled:text-[#4b5563] disabled:shadow-none disabled:cursor-not-allowed text-white text-lg font-bold py-4 px-10 rounded-xl transition-all duration-200 shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/30 min-w-[280px]"
+              className="inline-flex items-center justify-center gap-2.5 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:cursor-not-allowed text-primary-foreground text-lg font-bold py-4 px-10 rounded-xl transition-all duration-200 shadow-xl hover:shadow-primary/20 min-w-[280px]"
             >
               <Sparkles className="w-5 h-5" />
               Analyze My Portfolio
             </button>
             {selectedFunds.length === 1 && (
-              <p className="text-amber-400/80 text-sm animate-pulse-subtle">Add at least 2 funds to see overlap analysis</p>
+              <p className="text-amber-500/80 text-sm animate-pulse-subtle">Add at least 2 funds to see overlap analysis</p>
             )}
           </div>
         </div>

@@ -2,14 +2,16 @@
 
 import { useFundStore } from '@/lib/store'
 import { TABS, GROUPS } from '@/lib/constants'
-import { Shield, ChevronDown, Sparkles, Sun, Moon } from 'lucide-react'
+import { Shield, ChevronDown, Sparkles, Sun, Moon, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTheme } from 'next-themes'
 
 export default function Navbar() {
   const { activeTab, setActiveTab } = useFundStore()
   const [openGroup, setOpenGroup] = useState<string | null>(null)
-  const [isDark, setIsDark] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { theme, setTheme } = useTheme()
 
   const grouped = GROUPS.map(group => ({
     group,
@@ -20,8 +22,12 @@ export default function Navbar() {
   const activeGroup = activeTabConfig?.group
 
   const toggleTheme = () => {
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle('dark')
+    setTheme(theme === 'dark' ? 'light' : 'dark')
+  }
+
+  const handleTabSelect = (tabId: string) => {
+    setActiveTab(tabId as Parameters<typeof setActiveTab>[0])
+    setMobileMenuOpen(false)
   }
 
   return (
@@ -39,11 +45,11 @@ export default function Navbar() {
             <span className="text-lg font-extrabold tracking-tight text-foreground">
               Portfolio<span className="text-primary">X</span>
             </span>
-            <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Premium Wealth Intelligence</div>
+            <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] hidden sm:block">Premium Wealth Intelligence</div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Desktop Tab Navigation */}
         <nav className="hidden lg:flex items-center gap-1">
           {grouped.map(({ group, tabs }) => (
             <div key={group} className="relative"
@@ -106,31 +112,63 @@ export default function Navbar() {
           <button
             onClick={toggleTheme}
             className="w-9 h-9 rounded-lg flex items-center justify-center border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
           >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+
+          {/* Mobile menu toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Tab Bar */}
-      <div className="lg:hidden flex items-center gap-1 px-4 pb-2 overflow-x-auto scrollbar-none">
-        {GROUPS.map(group => (
-          <button
-            key={group}
-            onClick={() => {
-              const firstTab = TABS.find(t => t.group === group)
-              if (firstTab) setActiveTab(firstTab.id as Parameters<typeof setActiveTab>[0])
-            }}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-              activeGroup === group
-                ? 'bg-primary/10 text-primary border border-primary/20'
-                : 'text-muted-foreground border border-transparent hover:border-border'
-            }`}
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="lg:hidden border-t border-border/50 overflow-hidden"
           >
-            {group}
-          </button>
-        ))}
-      </div>
+            <div className="max-h-[70vh] overflow-y-auto px-4 py-3 space-y-4">
+              {grouped.map(({ group, tabs }) => (
+                <div key={group}>
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2 px-1">
+                    {group}
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {tabs.map(tab => {
+                      const Icon = tab.icon
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => handleTabSelect(tab.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                            activeTab === tab.id
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{tab.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   )
 }

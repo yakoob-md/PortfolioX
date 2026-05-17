@@ -1,5 +1,5 @@
 from typing import List, Dict
-from models.schemas import AnalysisResult, OverlapPair, ExpenseAudit
+from models.schemas import OverlapPair, ExpenseAudit
 
 class HealthScorer:
     """
@@ -70,3 +70,28 @@ class HealthScorer:
             score -= 7
 
         return max(0, int(score)), red_flags
+
+    def score_portfolio(
+        self,
+        overlap_matrix: List[OverlapPair],
+        sector_exposure: Dict[str, float],
+        expense_audit: ExpenseAudit,
+        stock_concentrations: List[Dict] = None,
+        funds: List[Dict] = None
+    ) -> tuple[int, List[str]]:
+        """
+        Alternative entry point called by the portfolio router.
+        Fills missing parameters with robust default fallbacks.
+        """
+        if stock_concentrations is None:
+            stock_concentrations = []
+        if funds is None:
+            funds = [{"name": name, "plan_type": "Regular"} for name in expense_audit.regular_plan_funds]
+
+        return self.calculate(
+            overlap_matrix=overlap_matrix,
+            expense_audit=expense_audit,
+            stock_concentrations=stock_concentrations,
+            sector_exposure=sector_exposure,
+            funds=funds
+        )

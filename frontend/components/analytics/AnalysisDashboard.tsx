@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { CheckCircle2, Share2, AlertTriangle, IndianRupee, Layers, BarChart3, TrendingUp, Copy, Check, Info } from 'lucide-react';
-import HealthScoreGauge from './HealthScoreGauge';
+import HealthScoreGauge from '@/components/analytics/HealthScoreGauge';
 import OverlapMatrix from './OverlapMatrix';
 import { AnalysisResult } from '@/lib/types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';

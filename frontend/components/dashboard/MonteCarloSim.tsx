@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,29 +10,116 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Dice5, TrendingUp, AlertTriangle } from 'lucide-react'
 import { formatCurrency } from '@/lib/helpers'
 
+interface SimulationResult {
+  results: { median: number; medianGain: number; medianGainPct: number; worst10pct: number; best10pct: number; potentialLoss10pct: number }
+  yearlyBands: { year: number; p10: number; p25: number; p50: number; p75: number; p90: number }[]
+  probabilityOfGain: number
+  probabilityOfDoubling: number
+}
+
+function runMonteCarlo(
+  investmentAmount: number,
+  years: number,
+  equityPct: number,
+  simulations = 1000
+): SimulationResult {
+  const debtPct = 100 - equityPct
+
+  const equityReturn = 0.12
+  const equityVol = 0.15
+  const debtReturn = 0.07
+  const debtVol = 0.05
+
+  const portfolioReturn = (equityPct / 100) * equityReturn + (debtPct / 100) * debtReturn
+  const portfolioVol = Math.sqrt(
+    Math.pow(equityPct / 100, 2) * Math.pow(equityVol, 2) +
+    Math.pow(debtPct / 100, 2) * Math.pow(debtVol, 2)
+  )
+
+  const allPaths: number[][] = []
+
+  for (let sim = 0; sim < simulations; sim++) {
+    const path: number[] = [investmentAmount]
+    let value = investmentAmount
+    for (let y = 1; y <= years; y++) {
+      const u1 = Math.random()
+      const u2 = Math.random()
+      const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
+      value = value * Math.exp(
+        (portfolioReturn - 0.5 * Math.pow(portfolioVol, 2)) +
+        portfolioVol * z
+      )
+      path.push(Math.max(0, value))
+    }
+    allPaths.push(path)
+  }
+
+  const yearlyBands: SimulationResult['yearlyBands'] = []
+  for (let y = 0; y <= years; y++) {
+    const values = allPaths.map(p => p[y]).sort((a, b) => a - b)
+    const percentile = (p: number) => {
+      const idx = Math.floor((p / 100) * (values.length - 1))
+      return values[idx]
+    }
+    yearlyBands.push({
+      year: y,
+      p10: percentile(10),
+      p25: percentile(25),
+      p50: percentile(50),
+      p75: percentile(75),
+      p90: percentile(90),
+    })
+  }
+
+  const finalValues = allPaths.map(p => p[years]).sort((a, b) => a - b)
+  const median = finalValues[Math.floor(0.5 * finalValues.length)]
+  const worst10pct = finalValues[Math.floor(0.1 * finalValues.length)]
+  const best10pct = finalValues[Math.floor(0.9 * finalValues.length)]
+  const probOfGain = (finalValues.filter(v => v > investmentAmount).length / finalValues.length) * 100
+  const probOfDoubling = (finalValues.filter(v => v >= investmentAmount * 2).length / finalValues.length) * 100
+
+  return {
+    results: {
+      median: Math.round(median),
+      medianGain: Math.round(median - investmentAmount),
+      medianGainPct: Math.round(((median - investmentAmount) / investmentAmount) * 100),
+      worst10pct: Math.round(worst10pct),
+      best10pct: Math.round(best10pct),
+      potentialLoss10pct: Math.round(Math.max(0, investmentAmount - worst10pct)),
+    },
+    yearlyBands,
+    probabilityOfGain: Math.round(probOfGain),
+    probabilityOfDoubling: Math.round(probOfDoubling),
+  }
+}
+
 export default function MonteCarloSim() {
   const [investmentAmount, setInvestmentAmount] = useState(1000000)
   const [years, setYears] = useState(15)
   const [equityPct, setEquityPct] = useState(60)
-  const [result, setResult] = useState<{
-    results: { median: number; medianGain: number; medianGainPct: number; worst10pct: number; best10pct: number; potentialLoss10pct: number }
-    yearlyBands: { year: number; p10: number; p25: number; p50: number; p75: number; p90: number }[]
-    probabilityOfGain: number; probabilityOfDoubling: number
-  } | null>(null)
+  const [result, setResult] = useState<SimulationResult | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const runSimulation = async () => {
+  const runSimulation = useCallback(async () => {
     setLoading(true)
+    await new Promise(r => setTimeout(r, 600))
     try {
       const res = await fetch('/api/portfolio/monte-carlo', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ investmentAmount, years, equityPct, debtPct: 100 - equityPct, simulations: 1000 })
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ investmentAmount, years, equityPct, debtPct: 100 - equityPct, simulations: 1000 }),
       })
-      const data = await res.json()
-      setResult(data)
-    } catch { /* ignore */ }
+      if (res.ok) {
+        const data = await res.json()
+        setResult(data)
+      } else {
+        setResult(runMonteCarlo(investmentAmount, years, equityPct))
+      }
+    } catch {
+      setResult(runMonteCarlo(investmentAmount, years, equityPct))
+    }
     setLoading(false)
-  }
+  }, [investmentAmount, years, equityPct])
 
   const debtPct = 100 - equityPct
 
@@ -44,20 +131,32 @@ export default function MonteCarloSim() {
         </div>
         <div>
           <h2 className="text-xl font-bold">Monte Carlo Simulation</h2>
-          <p className="text-sm text-muted-foreground">1000 simulations for portfolio projection</p>
+          <p className="text-sm text-muted-foreground">1000 simulations using geometric Brownian motion</p>
         </div>
       </div>
 
       <Card>
         <CardContent className="pt-6 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div><Label>Investment Amount (₹)</Label><Input type="number" value={investmentAmount} onChange={e => setInvestmentAmount(Number(e.target.value))} /></div>
-            <div><Label>Time Horizon (Years)</Label><Input type="number" value={years} onChange={e => setYears(Number(e.target.value))} min={1} max={40} /></div>
-            <div><Label>Equity Allocation (%)</Label><Input type="number" value={equityPct} onChange={e => setEquityPct(Math.min(100, Math.max(0, Number(e.target.value))))} min={0} max={100} /></div>
-            <div><Label>Debt Allocation (%)</Label><Input type="number" value={debtPct} disabled /></div>
+            <div>
+              <Label>Investment Amount (₹)</Label>
+              <Input type="number" value={investmentAmount} onChange={e => setInvestmentAmount(Number(e.target.value))} />
+            </div>
+            <div>
+              <Label>Time Horizon (Years)</Label>
+              <Input type="number" value={years} onChange={e => setYears(Number(e.target.value))} min={1} max={40} />
+            </div>
+            <div>
+              <Label>Equity Allocation (%)</Label>
+              <Input type="number" value={equityPct} onChange={e => setEquityPct(Math.min(100, Math.max(0, Number(e.target.value))))} min={0} max={100} />
+            </div>
+            <div>
+              <Label>Debt Allocation (%)</Label>
+              <Input type="number" value={debtPct} disabled />
+            </div>
           </div>
           <Button onClick={runSimulation} disabled={loading} className="w-full bg-emerald-600 hover:bg-emerald-700">
-            {loading ? 'Running 1000 Simulations...' : '🎲 Run Monte Carlo Simulation'}
+            {loading ? 'Running 1000 Simulations...' : 'Run Monte Carlo Simulation'}
           </Button>
         </CardContent>
       </Card>

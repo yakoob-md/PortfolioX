@@ -1,12 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useFundStore } from '@/lib/store'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import Navbar from '@/components/Navbar'
 import AICopilot from '@/components/dashboard/AICopilot'
 import Launcher from '@/components/landing/Launcher'
+import Footer from '@/components/dashboard/Footer'
+import { ErrorBoundary } from '@/components/dashboard/ErrorBoundary'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 
 // ============ LAZY-LOADED FEATURE MODULES ============
 // Discover
@@ -49,6 +52,9 @@ const EmergencyFund = dynamic(() => import('@/components/dashboard/EmergencyFund
 const XIRRCalculator = dynamic(() => import('@/components/dashboard/XIRRCalculator'), { ssr: false })
 const Watchlist = dynamic(() => import('@/components/dashboard/Watchlist'), { ssr: false })
 const PortfolioExport = dynamic(() => import('@/components/dashboard/PortfolioExport'), { ssr: false })
+const LumpsumCalculator = dynamic(() => import('@/components/dashboard/LumpsumCalculator'), { ssr: false })
+const SWPCalculator = dynamic(() => import('@/components/dashboard/SWPCalculator'), { ssr: false })
+const STPCalculator = dynamic(() => import('@/components/dashboard/STPCalculator'), { ssr: false })
 
 const tabAnimation = {
   initial: { opacity: 0, y: 16 },
@@ -59,51 +65,69 @@ const tabAnimation = {
 export default function Home() {
   const { activeTab } = useFundStore()
   const [showLauncher, setShowLauncher] = useState(true)
+  const reducedMotion = useReducedMotion()
 
-  const renderContent = () => (
-    <>
-      {/* ── INSIGHTS ─────────────────────────── */}
-      {activeTab === 'explore'        && <ExploreFunds />}
-      {activeTab === 'market'         && <MarketDashboard />}
-      {activeTab === 'heatmap'        && <FundHeatmap />}
-      {activeTab === 'nav'            && <NAVHistory />}
-      {activeTab === 'screener'       && <FundScreener />}
-      {activeTab === 'rankings'       && <FundRankings />}
-      {activeTab === 'amc'            && <AMCAnalysis />}
-      {activeTab === 'rollingreturns' && <RollingReturns />}
-      {activeTab === 'categoryperf'   && <CategoryPerformance />}
+  const transitionProps = reducedMotion
+    ? { duration: 0 }
+    : { duration: 0.8, ease: [0.43, 0.13, 0.23, 0.96] as [number, number, number, number] }
 
-      {/* ── MANAGEMENT ───────────────────────── */}
-      {activeTab === 'portfolio'      && <PortfolioAnalyze />}
-      {activeTab === 'compare'        && <CompareView />}
-      {activeTab === 'overlap'        && <FundOverlap />}
-      {activeTab === 'sector'         && <SectorExposure />}
-      {activeTab === 'diversification'&& <DiversificationScore />}
-      {activeTab === 'montecarlo'     && <MonteCarloSim />}
+  const dashboardTransitionProps = reducedMotion
+    ? { duration: 0 }
+    : { duration: 0.8, ease: "easeOut" as const }
 
-      {/* ── STRATEGY ─────────────────────────── */}
-      {activeTab === 'savings'        && <SavingsCalculator />}
-      {activeTab === 'sip'            && <SIPPlanner />}
-      {activeTab === 'goals'          && <GoalPlanner />}
-      {activeTab === 'risk'           && <RiskProfiler />}
-      {activeTab === 'fdvsmf'         && <FDvsMF />}
-      {activeTab === 'inflation'      && <InflationCalculator />}
+  const tabAnimProps = reducedMotion
+    ? { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 1 } }
+    : tabAnimation
 
-      {/* ── OPTIMIZATION ─────────────────────── */}
-      {activeTab === 'tax'            && <TaxMitra />}
-      {activeTab === 'exitload'       && <ExitLoadCalc />}
-      {activeTab === 'rebalance'      && <RebalancingView />}
-      {activeTab === 'stress'         && <StressTest />}
-      {activeTab === 'commission'     && <CommissionDisclosure />}
-      {activeTab === 'elsstax'        && <ELSSTaxSaver />}
-      {activeTab === 'emergency'      && <EmergencyFund />}
+  const renderContent = useMemo(() => (
+    <ErrorBoundary>
+      <>
+        {/* ── INSIGHTS ─────────────────────────── */}
+        {activeTab === 'explore'        && <ExploreFunds />}
+        {activeTab === 'market'         && <MarketDashboard />}
+        {activeTab === 'heatmap'        && <FundHeatmap />}
+        {activeTab === 'nav'            && <NAVHistory />}
+        {activeTab === 'screener'       && <FundScreener />}
+        {activeTab === 'rankings'       && <FundRankings />}
+        {activeTab === 'amc'            && <AMCAnalysis />}
+        {activeTab === 'rollingreturns' && <RollingReturns />}
+        {activeTab === 'categoryperf'   && <CategoryPerformance />}
 
-      {/* ── TOOLKIT ──────────────────────────── */}
-      {activeTab === 'xirr'           && <XIRRCalculator />}
-      {activeTab === 'watchlist'      && <Watchlist />}
-      {activeTab === 'export'         && <PortfolioExport />}
-    </>
-  )
+        {/* ── MANAGEMENT ───────────────────────── */}
+        {activeTab === 'portfolio'      && <PortfolioAnalyze />}
+        {activeTab === 'compare'        && <CompareView />}
+        {activeTab === 'overlap'        && <FundOverlap />}
+        {activeTab === 'sector'         && <SectorExposure />}
+        {activeTab === 'diversification'&& <DiversificationScore />}
+        {activeTab === 'montecarlo'     && <MonteCarloSim />}
+
+        {/* ── STRATEGY ─────────────────────────── */}
+        {activeTab === 'savings'        && <SavingsCalculator />}
+        {activeTab === 'sip'            && <SIPPlanner />}
+        {activeTab === 'goals'          && <GoalPlanner />}
+        {activeTab === 'risk'           && <RiskProfiler />}
+        {activeTab === 'fdvsmf'         && <FDvsMF />}
+        {activeTab === 'inflation'      && <InflationCalculator />}
+
+        {/* ── OPTIMIZATION ─────────────────────── */}
+        {activeTab === 'tax'            && <TaxMitra />}
+        {activeTab === 'exitload'       && <ExitLoadCalc />}
+        {activeTab === 'rebalance'      && <RebalancingView />}
+        {activeTab === 'stress'         && <StressTest />}
+        {activeTab === 'commission'     && <CommissionDisclosure />}
+        {activeTab === 'elsstax'        && <ELSSTaxSaver />}
+        {activeTab === 'emergency'      && <EmergencyFund />}
+
+        {/* ── TOOLKIT ──────────────────────────── */}
+        {activeTab === 'xirr'           && <XIRRCalculator />}
+        {activeTab === 'watchlist'      && <Watchlist />}
+        {activeTab === 'export'         && <PortfolioExport />}
+        {activeTab === 'lumpsum'        && <LumpsumCalculator />}
+        {activeTab === 'swp'            && <SWPCalculator />}
+        {activeTab === 'stp'            && <STPCalculator />}
+      </>
+    </ErrorBoundary>
+  ), [activeTab])
 
   return (
     <AnimatePresence mode="wait">
@@ -112,7 +136,7 @@ export default function Home() {
           key="launcher"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.05 }}
-          transition={{ duration: 0.8, ease: [0.43, 0.13, 0.23, 0.96] }}
+          transition={transitionProps}
           className="w-full relative"
         >
           <Launcher onLaunch={() => setShowLauncher(false)} />
@@ -122,7 +146,7 @@ export default function Home() {
           key="dashboard"
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          transition={dashboardTransitionProps}
           className="min-h-screen flex flex-col bg-background text-foreground"
         >
           <Navbar />
@@ -131,17 +155,18 @@ export default function Home() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={tabAnimation}
+                initial={tabAnimProps.initial}
+                animate={tabAnimProps.animate}
+                exit={tabAnimProps.exit}
+                variants={!reducedMotion ? tabAnimation : undefined}
               >
-                {renderContent()}
+                {renderContent}
               </motion.div>
             </AnimatePresence>
           </main>
 
           <AICopilot />
+          <Footer />
         </motion.div>
       )}
     </AnimatePresence>
