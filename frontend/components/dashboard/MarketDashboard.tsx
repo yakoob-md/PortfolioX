@@ -350,7 +350,7 @@ export default function MarketDashboard() {
       </div>
 
       {/* ─── Market Indices ───────────────────────────────────────────────────── */}
-      <div className="glass-card rounded-3xl p-6 border-white/10">
+      <div className="glass-card rounded-3xl p-6 dark:border-white/10 border-border">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-2">
           <div>
             <h3 className="font-bold text-lg flex items-center gap-2">
@@ -400,7 +400,7 @@ export default function MarketDashboard() {
       </div>
 
       {/* ─── Category Performance Summary ─────────────────────────────────────── */}
-      <div className="glass-card rounded-3xl p-6 border-white/10">
+      <div className="glass-card rounded-3xl p-6 dark:border-white/10 border-border">
         <div className="flex items-center gap-3 mb-8">
            <div className="h-10 w-10 rounded-2xl bg-teal-500/10 flex items-center justify-center">
              <PieChart className="h-5 w-5 text-teal-500" />
@@ -425,7 +425,7 @@ export default function MarketDashboard() {
                 transition={{ delay: idx * 0.04 }}
                 className="relative overflow-hidden group"
               >
-                <div className="glass-card rounded-2xl p-5 border-white/5 hover:border-white/20 transition-all hover:shadow-xl">
+                <div className="glass-card rounded-2xl p-5 dark:border-white/5 border-border hover:dark:border-white/20 hover:border-primary/20 transition-all hover:shadow-xl">
                   <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-background/50 border border-border/40 group-hover:bg-teal-500/10 transition-colors">
@@ -468,7 +468,7 @@ export default function MarketDashboard() {
       {/* ─── Top Movers ───────────────────────────────────────────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Best Performers */}
-        <div className="glass-card rounded-3xl p-6 border-emerald-500/10 overflow-hidden relative group">
+        <div className="glass-card rounded-3xl p-6 dark:border-emerald-500/10 border-emerald-200/50 overflow-hidden relative group">
           <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
             <TrendingUp className="h-40 w-40 text-emerald-500" />
           </div>
@@ -513,7 +513,7 @@ export default function MarketDashboard() {
         </div>
 
         {/* Bottom Performers */}
-        <div className="glass-card rounded-3xl p-6 border-red-500/10 overflow-hidden relative group">
+        <div className="glass-card rounded-3xl p-6 dark:border-red-500/10 border-red-200/50 overflow-hidden relative group">
           <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
             <TrendingDown className="h-40 w-40 text-red-500" />
           </div>
