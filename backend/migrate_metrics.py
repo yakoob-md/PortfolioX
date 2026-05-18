@@ -33,9 +33,9 @@ async def run_migration():
                     ALTER TABLE funds 
                     ADD COLUMN IF NOT EXISTS {col_name} {col_type}
                 """))
-                print(f"✓ Column '{col_name}' added/verified")
+                print(f"[OK] Column '{col_name}' added/verified")
             except Exception as e:
-                print(f"✗ Failed to add column '{col_name}': {e}")
+                print(f"[FAIL] Failed to add column '{col_name}': {e}")
         
         print("\nMigration complete. New columns added to funds table.")
 
