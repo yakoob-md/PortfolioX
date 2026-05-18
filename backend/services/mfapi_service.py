@@ -72,7 +72,7 @@ class NAVDataPoint:
 
 
 class FundMetaData:
-    """Complete fund metadata from mfapi.in."""
+    """Complete fund metadata from mfapi.in + optional seed data."""
     def __init__(self):
         self.scheme_code: str = ""
         self.scheme_name: str = ""
@@ -106,6 +106,17 @@ class FundMetaData:
         self.expense_ratio: Optional[float] = None
         # Estimated AUM (mfapi.in doesn't provide this)
         self.aum_crore: Optional[float] = None
+        # Portfolio characteristics (from seed data)
+        self.fund_manager: Optional[str] = None
+        self.portfolio_pe_ratio: Optional[float] = None
+        self.portfolio_pb_ratio: Optional[float] = None
+        self.num_stocks: Optional[int] = None
+        self.top_holdings: Optional[List[dict]] = None
+        self.equity_percentage: Optional[float] = None
+        self.debt_percentage: Optional[float] = None
+        self.cash_percentage: Optional[float] = None
+        self.benchmark: Optional[str] = None
+        self.exit_load: Optional[str] = None
 
 
 class MFAPIService:
@@ -308,6 +319,9 @@ class MFAPIService:
             
             meta.riskometer = self._determine_riskometer(meta.volatility_1y, meta.volatility_3y)
             
+            # Merge with seed data for portfolio characteristics
+            self._merge_seed_data(meta)
+            
             return meta
             
         except Exception as e:
@@ -400,6 +414,53 @@ class MFAPIService:
             return "High"
         else:
             return "Very High"
+    
+    @staticmethod
+    def _merge_seed_data(meta: FundMetaData) -> None:
+        """
+        Merge fund metadata with seed data for portfolio characteristics.
+        Seed data provides: fund_manager, AUM, P/E, P/B, top holdings, etc.
+        mfapi.in provides: NAV, returns, volatility, Sharpe ratio.
+        """
+        try:
+            from data.fund_seed_data import FUND_SEED_DATA
+            seed = FUND_SEED_DATA.get(meta.scheme_code)
+            if not seed:
+                return
+            
+            # Only fill in fields that are not already set from mfapi.in
+            if not meta.fund_manager:
+                meta.fund_manager = seed.get("fund_manager")
+            if not meta.aum_crore:
+                meta.aum_crore = seed.get("aum_crore")
+            if not meta.portfolio_pe_ratio:
+                meta.portfolio_pe_ratio = seed.get("portfolio_pe_ratio")
+            if not meta.portfolio_pb_ratio:
+                meta.portfolio_pb_ratio = seed.get("portfolio_pb_ratio")
+            if not meta.num_stocks:
+                meta.num_stocks = seed.get("num_stocks")
+            if not meta.top_holdings:
+                meta.top_holdings = seed.get("top_holdings")
+            if not meta.equity_percentage:
+                meta.equity_percentage = seed.get("equity_percentage")
+            if not meta.debt_percentage:
+                meta.debt_percentage = seed.get("debt_percentage")
+            if not meta.cash_percentage:
+                meta.cash_percentage = seed.get("cash_percentage")
+            if not meta.benchmark:
+                meta.benchmark = seed.get("benchmark")
+            if not meta.exit_load:
+                meta.exit_load = seed.get("exit_load")
+            
+            # Use seed expense_ratio if it's more accurate than our estimate
+            seed_er = seed.get("expense_ratio")
+            if seed_er and meta.expense_ratio:
+                # Prefer seed data expense_ratio over estimate
+                meta.expense_ratio = seed_er
+        except ImportError:
+            logger.warning("fund_seed_data not available, skipping seed merge")
+        except Exception as e:
+            logger.warning(f"Failed to merge seed data for {meta.scheme_code}: {e}")
     
     async def get_fund_details_batch(self, scheme_codes: List[str]) -> Dict[str, FundMetaData]:
         """
