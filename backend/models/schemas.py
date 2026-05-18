@@ -10,6 +10,9 @@ class FundBase(BaseModel):
     nav_date: Optional[date] = None
     plan_type: Optional[str] = None
     category: Optional[str] = None
+    sub_category: Optional[str] = None
+    expense_ratio: Optional[float] = None
+    aum_crore: Optional[float] = None
     # Real-time calculated metrics
     return_1y: Optional[float] = None
     return_3y: Optional[float] = None
@@ -24,10 +27,10 @@ class FundBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class FundDetail(FundBase):
-    sub_category: Optional[str] = None
     option_type: Optional[str] = None
-    expense_ratio: Optional[float] = None
-    aum_crore: Optional[float] = None
+    launch_date: Optional[date] = None
+    min_sip: Optional[int] = None
+    min_lumpsum: Optional[int] = None
     launch_date: Optional[date] = None
     min_sip: Optional[int] = None
     min_lumpsum: Optional[int] = None
