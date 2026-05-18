@@ -193,13 +193,13 @@ export default function ExploreFunds() {
 
                   {/* Direct vs Regular mini comparison */}
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-lg bg-emerald-100/50 p-2 dark:bg-emerald-950/20">
+                    <div className="rounded-lg bg-emerald-50 dark:bg-emerald-500/10 p-2 border border-emerald-200/50 dark:border-emerald-500/20">
                       <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">DIRECT</p>
                       <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{fund.directExpenseRatio}%</p>
                       <p className="text-[10px] text-muted-foreground">Expense Ratio</p>
                       <p className="text-xs font-medium mt-1 text-card-foreground">{formatPercent(fund.directReturn1y)} <span className="text-muted-foreground">1Y</span></p>
                     </div>
-                    <div className="rounded-lg bg-red-100/50 p-2 dark:bg-red-950/20">
+                    <div className="rounded-lg bg-red-50 dark:bg-red-500/10 p-2 border border-red-200/50 dark:border-red-500/20">
                       <p className="text-[10px] font-medium text-red-700 dark:text-red-400">REGULAR</p>
                       <p className="text-lg font-bold text-red-700 dark:text-red-400">{fund.regularExpenseRatio}%</p>
                       <p className="text-[10px] text-muted-foreground">Expense Ratio</p>
@@ -208,9 +208,9 @@ export default function ExploreFunds() {
                   </div>
 
                   {/* Savings callout */}
-                  <div className="rounded-md bg-amber-100/50 px-3 py-1.5 text-center dark:bg-amber-950/20">
+                  <div className="rounded-md bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 text-center border border-amber-200/50 dark:border-amber-500/20">
                     <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                      💰 You save <strong>{expDiff} bps/year</strong> in Direct = <strong>~₹{Math.round(expDiff * 50)}/yr</strong> on ₹5L
+                      Save <strong>{expDiff} bps/year</strong> in Direct = <strong>~₹{Math.round(expDiff * 50)}/yr</strong> on ₹5L
                     </p>
                   </div>
 

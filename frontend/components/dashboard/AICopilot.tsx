@@ -224,7 +224,7 @@ I'm ready to dive into your specific holdings—just ask!`
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed bottom-8 right-8 z-50 w-[440px] max-w-[calc(100vw-2rem)] h-[680px] max-h-[calc(100vh-4rem)] flex flex-col rounded-[2rem] bg-white border border-slate-200 shadow-3xl overflow-hidden shadow-blue-500/5"
+            className="fixed bottom-8 right-8 z-50 w-[440px] max-w-[calc(100vw-2rem)] h-[680px] max-h-[calc(100vh-4rem)] flex flex-col rounded-[2rem] bg-card border border-border shadow-2xl overflow-hidden"
           >
             {/* Header */}
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 flex items-center justify-between">
@@ -289,8 +289,8 @@ I'm ready to dive into your specific holdings—just ask!`
                     <div className="group relative max-w-[85%]">
                       <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
                         msg.role === 'user' 
-                          ? 'bg-primary text-white rounded-tr-none' 
-                          : 'bg-white border border-slate-200 text-foreground rounded-tl-none shadow-sm'
+                          ? 'bg-primary text-primary-foreground rounded-tr-none' 
+                          : 'bg-card border border-border text-foreground rounded-tl-none shadow-sm'
                       }`}>
                         {msg.role === 'assistant' && !msg.content ? (
                           <div className="flex gap-1.5 py-1">
@@ -332,7 +332,7 @@ I'm ready to dive into your specific holdings—just ask!`
                       key={i}
                       variant="outline"
                       size="sm"
-                      className="text-[11px] h-8 px-3 rounded-full border-emerald-500/10 hover:border-emerald-500/30 hover:bg-emerald-500/5 text-muted-foreground hover:text-emerald-700 transition-all"
+                      className="text-[11px] h-8 px-3 rounded-full border-border hover:border-primary/30 hover:bg-primary/5 text-muted-foreground hover:text-foreground transition-all"
                       onClick={() => sendMessage(q as string)}
                     >
                       {q}
@@ -365,7 +365,7 @@ I'm ready to dive into your specific holdings—just ask!`
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask your co-pilot..."
-                  className="h-14 pl-5 pr-14 rounded-2xl border-slate-200 focus:border-primary/50 focus:ring-primary/10"
+                  className="h-14 pl-5 pr-14 rounded-2xl border-border focus:border-primary/50 focus:ring-primary/10"
                   disabled={isLoading}
                 />
                 <Button

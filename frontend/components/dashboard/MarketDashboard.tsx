@@ -184,7 +184,7 @@ function SparklineMini({ data, positive }: { data: { day: number; value: number 
           <Line
             type="monotone"
             dataKey="value"
-            stroke={positive ? '#10b981' : '#ef4444'}
+            stroke={positive ? 'var(--color-chart-2)' : 'var(--color-chart-5)'}
             strokeWidth={1.5}
             dot={false}
           />
@@ -260,10 +260,10 @@ export default function MarketDashboard() {
     const sorted = [...allValues].sort((a, b) => a - b)
     const idx = sorted.findIndex((v) => v >= value)
     const percentile = idx / sorted.length
-    if (percentile >= 0.75) return 'text-emerald-500'
-    if (percentile >= 0.5) return 'text-emerald-500/70'
-    if (percentile >= 0.25) return 'text-amber-500'
-    return 'text-red-500'
+    if (percentile >= 0.75) return 'text-emerald-600 dark:text-emerald-400'
+    if (percentile >= 0.5) return 'text-emerald-600/70 dark:text-emerald-400/70'
+    if (percentile >= 0.25) return 'text-amber-600 dark:text-amber-400'
+    return 'text-red-600 dark:text-red-400'
   }, [])
 
   const all1yReturns = categoryPerf.map((c) => c.avgReturn1y).filter((v) => v !== 0)
