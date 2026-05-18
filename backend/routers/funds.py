@@ -2,12 +2,16 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import json
+import logging
 
 from db.database import get_db
 from db.repositories.fund_repo import FundRepository
 from db.cache import cache_service
 from services.fund_resolver import FundResolver
+from services.mfapi_service import MFAPIService
 from models.schemas import FundSearchResponse, FundBase, FundDetail
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/funds", tags=["funds"])
 
@@ -103,3 +107,139 @@ async def get_fund_details(
     await cache_service.set_cached(cache_key, response_data.model_dump_json(), ttl_seconds=86400)
     
     return response_data
+
+@router.post("/{scheme_code}/refresh")
+async def refresh_fund_data(
+    scheme_code: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Refresh fund data from mfapi.in in real-time.
+    Fetches latest NAV, returns, volatility, Sharpe ratio, and riskometer.
+    """
+    try:
+        mfapi = MFAPIService()
+        meta = await mfapi.get_fund_metadata(scheme_code)
+        await mfapi.close()
+        
+        if not meta:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Could not fetch data for fund {scheme_code} from mfapi.in"
+            )
+        
+        # Update database with real-time metrics
+        fund_repo = FundRepository(db)
+        metrics = {
+            "return_1y": meta.return_1y,
+            "return_3y": meta.return_3y,
+            "return_5y": meta.return_5y,
+            "volatility_1y": meta.volatility_1y,
+            "volatility_3y": meta.volatility_3y,
+            "sharpe_1y": meta.sharpe_1y,
+            "sharpe_3y": meta.sharpe_3y,
+            "riskometer": meta.riskometer,
+            "min_sip": meta.min_sip,
+            "min_lumpsum": meta.min_lumpsum,
+            "fund_type": meta.fund_type,
+        }
+        
+        # Also update NAV if available
+        if meta.latest_nav:
+            metrics["nav"] = meta.latest_nav
+        if meta.nav_date:
+            metrics["nav_date"] = meta.nav_date
+        
+        success = await fund_repo.update_fund_metrics(scheme_code, metrics)
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Fund {scheme_code} not found in database"
+            )
+        
+        # Invalidate cache
+        await cache_service.delete_cached(f"fund:{scheme_code}")
+        
+        return {
+            "scheme_code": scheme_code,
+            "message": "Fund data refreshed successfully",
+            "metrics": {
+                "nav": meta.latest_nav,
+                "nav_date": str(meta.nav_date) if meta.nav_date else None,
+                "return_1y": meta.return_1y,
+                "return_3y": meta.return_3y,
+                "return_5y": meta.return_5y,
+                "volatility_1y": meta.volatility_1y,
+                "sharpe_1y": meta.sharpe_1y,
+                "riskometer": meta.riskometer,
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to refresh fund data for {scheme_code}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to refresh fund data: {str(e)}"
+        )
+
+@router.post("/bulk-refresh")
+async def bulk_refresh_funds(
+    scheme_codes: List[str],
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Refresh multiple funds in parallel from mfapi.in.
+    Returns count of successfully updated funds.
+    """
+    if not scheme_codes or len(scheme_codes) > 50:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide between 1 and 50 scheme codes"
+        )
+    
+    try:
+        mfapi = MFAPIService()
+        fund_data = await mfapi.get_fund_details_batch(scheme_codes)
+        await mfapi.close()
+        
+        # Prepare metrics for bulk update
+        metrics_map = {}
+        for code, meta in fund_data.items():
+            metrics_map[code] = {
+                "return_1y": meta.return_1y,
+                "return_3y": meta.return_3y,
+                "return_5y": meta.return_5y,
+                "volatility_1y": meta.volatility_1y,
+                "volatility_3y": meta.volatility_3y,
+                "sharpe_1y": meta.sharpe_1y,
+                "sharpe_3y": meta.sharpe_3y,
+                "riskometer": meta.riskometer,
+                "min_sip": meta.min_sip,
+                "min_lumpsum": meta.min_lumpsum,
+                "fund_type": meta.fund_type,
+                "nav": meta.latest_nav,
+                "nav_date": meta.nav_date,
+            }
+        
+        fund_repo = FundRepository(db)
+        updated_count = await fund_repo.bulk_update_fund_metrics(metrics_map)
+        
+        # Invalidate caches
+        for code in metrics_map.keys():
+            await cache_service.delete_cached(f"fund:{code}")
+        
+        return {
+            "message": f"Successfully refreshed {updated_count}/{len(scheme_codes)} funds",
+            "updated_count": updated_count,
+            "total_requested": len(scheme_codes),
+        }
+        
+    except Exception as e:
+        logger.error(f"Bulk refresh failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Bulk refresh failed: {str(e)}"
+        )

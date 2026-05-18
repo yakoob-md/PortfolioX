@@ -27,6 +27,19 @@ class Fund(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    # Real-time calculated metrics from mfapi.in
+    return_1y: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    return_3y: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    return_5y: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    volatility_1y: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    volatility_3y: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    sharpe_1y: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    sharpe_3y: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    riskometer: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    min_sip: Mapped[Optional[int]] = mapped_column(nullable=True)
+    min_lumpsum: Mapped[Optional[int]] = mapped_column(nullable=True)
+    fund_type: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     holdings: Mapped[List["FundHolding"]] = relationship("FundHolding", back_populates="fund")
 
 class FundHolding(Base):

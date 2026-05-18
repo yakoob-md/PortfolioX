@@ -1,8 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func, text
 from sqlalchemy.orm import selectinload
-from typing import List, Optional
+from typing import List, Optional, Dict
+import logging
 from ..models import Fund, FundHolding, AnalysisSession
+
+logger = logging.getLogger(__name__)
 
 class FundRepository:
     """
@@ -40,6 +43,48 @@ class FundRepository:
         
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    async def update_fund_metrics(self, scheme_code: str, metrics: dict) -> bool:
+        """
+        Update real-time calculated metrics for a fund.
+        metrics dict should contain: return_1y, return_3y, return_5y,
+        volatility_1y, volatility_3y, sharpe_1y, sharpe_3y, riskometer,
+        min_sip, min_lumpsum, fund_type
+        """
+        try:
+            stmt = (
+                select(Fund)
+                .where(Fund.scheme_code == scheme_code)
+            )
+            result = await self.db.execute(stmt)
+            fund = result.scalar_one_or_none()
+            
+            if not fund:
+                return False
+            
+            # Update metrics
+            for key, value in metrics.items():
+                if hasattr(fund, key) and value is not None:
+                    setattr(fund, key, value)
+            
+            await self.db.commit()
+            return True
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"Failed to update fund metrics for {scheme_code}: {e}")
+            return False
+
+    async def bulk_update_fund_metrics(self, metrics_map: Dict[str, dict]) -> int:
+        """
+        Bulk update metrics for multiple funds.
+        metrics_map: {scheme_code: {metric_name: value, ...}}
+        Returns: number of funds updated successfully
+        """
+        updated_count = 0
+        for scheme_code, metrics in metrics_map.items():
+            if await self.update_fund_metrics(scheme_code, metrics):
+                updated_count += 1
+        return updated_count
 
     async def get_fund_by_code(self, scheme_code: str) -> Optional[Fund]:
         """Get a single fund by its scheme code."""

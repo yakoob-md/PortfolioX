@@ -10,6 +10,16 @@ class FundBase(BaseModel):
     nav_date: Optional[date] = None
     plan_type: Optional[str] = None
     category: Optional[str] = None
+    # Real-time calculated metrics
+    return_1y: Optional[float] = None
+    return_3y: Optional[float] = None
+    return_5y: Optional[float] = None
+    volatility_1y: Optional[float] = None
+    volatility_3y: Optional[float] = None
+    sharpe_1y: Optional[float] = None
+    sharpe_3y: Optional[float] = None
+    riskometer: Optional[str] = None
+    fund_type: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -19,6 +29,8 @@ class FundDetail(FundBase):
     expense_ratio: Optional[float] = None
     aum_crore: Optional[float] = None
     launch_date: Optional[date] = None
+    min_sip: Optional[int] = None
+    min_lumpsum: Optional[int] = None
 
 # --- Phase 1: Portfolio Analysis Schemas ---
 
