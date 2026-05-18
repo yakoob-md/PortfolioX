@@ -1,7 +1,7 @@
 """
 MFAPI Service - Fetches real-time mutual fund data from mfapi.in
 Free API, no authentication required.
-Provides: NAV history, returns calculation, fund metadata
+Provides: NAV history, returns calculation, fund metadata, search
 """
 import httpx
 import logging
@@ -13,11 +13,63 @@ logger = logging.getLogger(__name__)
 
 MFAPI_BASE = "https://api.mfapi.in"
 
+# Realistic expense ratio estimates by category (Direct plan base)
+# These are industry-standard estimates for Indian mutual funds
+EXPENSE_RATIO_ESTIMATES = {
+    "index": 0.20,
+    "etf": 0.20,
+    "liquid": 0.30,
+    "overnight": 0.25,
+    "money market": 0.30,
+    "ultra short": 0.35,
+    "low duration": 0.35,
+    "short duration": 0.40,
+    "corporate bond": 0.45,
+    "banking and psu": 0.45,
+    "gilt": 0.50,
+    "debt": 0.45,
+    "arbitrage": 0.40,
+    "balanced advantage": 0.55,
+    "hybrid": 0.60,
+    "aggressive hybrid": 0.65,
+    "conservative hybrid": 0.50,
+    "elss": 0.60,
+    "large cap": 0.50,
+    "flexi cap": 0.55,
+    "multi cap": 0.60,
+    "mid cap": 0.65,
+    "small cap": 0.70,
+    "sectoral": 0.70,
+    "thematic": 0.70,
+    "international": 0.80,
+    "fof": 0.40,
+    "fund of funds": 0.40,
+}
+
+# Regular plan premium over direct (in percentage points)
+REGULAR_PREMIUM = 0.75
+
+
+def estimate_expense_ratio(category: str, sub_category: str, plan_type: str = "Direct") -> float:
+    """Estimate expense ratio based on category. Returns Direct plan estimate."""
+    cat_lower = (sub_category or category or "").lower()
+    
+    for key, ratio in EXPENSE_RATIO_ESTIMATES.items():
+        if key in cat_lower:
+            base = ratio
+            break
+    else:
+        base = 0.55  # Default equity fund
+    
+    return round(base if plan_type == "Direct" else base + REGULAR_PREMIUM, 2)
+
+
 class NAVDataPoint:
     """Single NAV data point with date and value."""
     def __init__(self, nav_date: date, nav: float):
         self.nav_date = nav_date
         self.nav = nav
+
 
 class FundMetaData:
     """Complete fund metadata from mfapi.in."""
@@ -25,11 +77,13 @@ class FundMetaData:
         self.scheme_code: str = ""
         self.scheme_name: str = ""
         self.amc_name: str = ""
-        self.fund_type: str = ""  # Open Ended, Close Ended, etc.
-        self.category: str = ""  # Equity, Debt, Hybrid, etc.
-        self.sub_category: str = ""  # Large Cap, Mid Cap, etc.
-        self.plan_type: str = ""  # Direct, Regular
-        self.option_type: str = ""  # Growth, IDCW, Bonus
+        self.fund_type: str = ""
+        self.category: str = ""
+        self.sub_category: str = ""
+        self.plan_type: str = ""
+        self.option_type: str = ""
+        self.isin_growth: Optional[str] = None
+        self.isin_div: Optional[str] = None
         self.latest_nav: Optional[float] = None
         self.nav_date: Optional[date] = None
         self.nav_history: List[NAVDataPoint] = []
@@ -48,9 +102,11 @@ class FundMetaData:
         self.riskometer: str = "Moderate"
         self.min_sip: int = 500
         self.min_lumpsum: int = 5000
-        # Expense and Assets
+        # Estimated expense ratio (mfapi.in doesn't provide this)
         self.expense_ratio: Optional[float] = None
+        # Estimated AUM (mfapi.in doesn't provide this)
         self.aum_crore: Optional[float] = None
+
 
 class MFAPIService:
     """Service to fetch and process data from mfapi.in"""
@@ -68,7 +124,7 @@ class MFAPIService:
     async def get_all_funds(self) -> List[Dict[str, Any]]:
         """
         Get list of all funds from mfapi.in
-        Returns: List of fund objects with scheme_code, scheme_name, etc.
+        Returns: List of {schemeCode, schemeName, isinGrowth, isinDivReinvestment}
         """
         try:
             response = await self._client.get("/mf")
@@ -76,6 +132,35 @@ class MFAPIService:
             return response.json()
         except Exception as e:
             logger.error(f"Failed to fetch fund list from mfapi.in: {e}")
+            return []
+    
+    async def search_funds(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
+        """
+        Search funds by name from mfapi.in.
+        Returns list of matching funds with scheme_code, scheme_name, isin.
+        """
+        try:
+            all_funds = await self.get_all_funds()
+            if not all_funds:
+                return []
+            
+            query_lower = query.lower()
+            results = []
+            for fund in all_funds:
+                name = fund.get("schemeName", "")
+                if query_lower in name.lower():
+                    results.append({
+                        "scheme_code": str(fund.get("schemeCode", "")),
+                        "scheme_name": name,
+                        "isin_growth": fund.get("isinGrowth"),
+                        "isin_div": fund.get("isinDivReinvestment"),
+                    })
+                    if len(results) >= limit:
+                        break
+            
+            return results
+        except Exception as e:
+            logger.error(f"Failed to search funds: {e}")
             return []
     
     async def get_fund_nav_history(self, scheme_code: str) -> List[Dict[str, str]]:
@@ -130,7 +215,6 @@ class MFAPIService:
         This is the main method to get all data for a fund.
         """
         try:
-            # Fetch complete fund details from mfapi.in
             response = await self._client.get(f"/mf/{scheme_code}")
             response.raise_for_status()
             data = response.json()
@@ -152,22 +236,23 @@ class MFAPIService:
                 if nav_date and nav is not None:
                     nav_points.append(NAVDataPoint(nav_date, nav))
             
-            # Sort by date (newest first)
             nav_points.sort(key=lambda x: x.nav_date, reverse=True)
             meta.nav_history = nav_points
             
             if not nav_points:
                 return None
             
-            # Set latest NAV
             meta.latest_nav = nav_points[0].nav
             meta.nav_date = nav_points[0].nav_date
             
-            # Extract metadata fields from the real API response
+            # Parse metadata from real API response
             meta.scheme_name = meta_raw.get("scheme_name", "")
             meta.amc_name = meta_raw.get("fund_house", "Other")
             meta.fund_type = meta_raw.get("scheme_type", "Open Ended")
+            meta.isin_growth = meta_raw.get("isin_growth")
+            meta.isin_div = meta_raw.get("isin_div_reinvestment")
             
+            # Parse category
             scheme_category = meta_raw.get("scheme_category", "")
             if scheme_category:
                 if " - " in scheme_category:
@@ -180,50 +265,28 @@ class MFAPIService:
             else:
                 meta.category = "Equity"
                 meta.sub_category = ""
-                
-            # Parse plan type (Direct/Regular)
-            if "direct" in meta.scheme_name.lower():
-                meta.plan_type = "Direct"
-            else:
-                meta.plan_type = "Regular"
-                
+            
+            # Parse plan type
+            meta.plan_type = "Direct" if "direct" in meta.scheme_name.lower() else "Regular"
+            
             # Parse option type
-            if "growth" in meta.scheme_name.lower():
+            name_lower = meta.scheme_name.lower()
+            if "growth" in name_lower:
                 meta.option_type = "Growth"
-            elif "idcw" in meta.scheme_name.lower() or "dividend" in meta.scheme_name.lower():
+            elif "idcw" in name_lower or "dividend" in name_lower:
                 meta.option_type = "IDCW"
             else:
                 meta.option_type = "Growth"
-                
-            # Compute a realistic, deterministic AUM in Crores (₹500 Cr to ₹15,000 Cr)
-            code_num = int(scheme_code) if scheme_code.isdigit() else 100000
-            meta.aum_crore = round(500.0 + (code_num % 14500) + (code_num % 100) * 0.13, 2)
             
-            # Compute a highly realistic, deterministic Expense Ratio based on plan and sub_category
-            cat_lower = (meta.sub_category or meta.category or "").lower()
-            is_direct = meta.plan_type == "Direct"
+            # Estimate expense ratio based on category (mfapi.in doesn't provide real data)
+            meta.expense_ratio = estimate_expense_ratio(meta.category, meta.sub_category, meta.plan_type)
             
-            if "index" in cat_lower or "etf" in cat_lower:
-                base_exp = 0.15 + (code_num % 15) * 0.01
-            elif "liquid" in cat_lower or "debt" in cat_lower or "cash" in cat_lower or "money market" in cat_lower:
-                base_exp = 0.20 + (code_num % 25) * 0.01
-            elif "small cap" in cat_lower or "mid cap" in cat_lower:
-                base_exp = 0.60 + (code_num % 30) * 0.01
-            elif "large cap" in cat_lower or "flexi cap" in cat_lower or "multi cap" in cat_lower:
-                base_exp = 0.40 + (code_num % 25) * 0.01
-            elif "hybrid" in cat_lower or "balanced" in cat_lower:
-                base_exp = 0.50 + (code_num % 25) * 0.01
-            else:
-                base_exp = 0.45 + (code_num % 25) * 0.01
-                
-            meta.expense_ratio = round(base_exp if is_direct else base_exp + 0.75, 2)
-            
-            # Calculate returns
+            # Calculate returns from NAV history
             meta.return_1y = self._calculate_return(nav_points, years=1)
             meta.return_3y = self._calculate_return(nav_points, years=3)
             meta.return_5y = self._calculate_return(nav_points, years=5)
             
-            # Calculate inception date and return
+            # Inception date and return
             if len(nav_points) > 1:
                 meta.inception_date = nav_points[-1].nav_date
                 days_since_inception = (nav_points[0].nav_date - nav_points[-1].nav_date).days
@@ -233,18 +296,16 @@ class MFAPIService:
                         ((nav_points[0].nav / nav_points[-1].nav) ** (1 / years) - 1) * 100
                     )
             
-            # Calculate volatility and Sharpe ratio
+            # Volatility and Sharpe ratio
             meta.volatility_1y = self._calculate_volatility(nav_points, years=1)
             meta.volatility_3y = self._calculate_volatility(nav_points, years=3)
             
-            # Sharpe ratio (assuming risk-free rate of 6.5% for India)
             risk_free_rate = 6.5
             if meta.volatility_1y and meta.volatility_1y > 0 and meta.return_1y is not None:
-                meta.sharpe_1y = (meta.return_1y - risk_free_rate) / meta.volatility_1y
+                meta.sharpe_1y = round((meta.return_1y - risk_free_rate) / meta.volatility_1y, 2)
             if meta.volatility_3y and meta.volatility_3y > 0 and meta.return_3y is not None:
-                meta.sharpe_3y = (meta.return_3y - risk_free_rate) / meta.volatility_3y
+                meta.sharpe_3y = round((meta.return_3y - risk_free_rate) / meta.volatility_3y, 2)
             
-            # Determine riskometer based on volatility
             meta.riskometer = self._determine_riskometer(meta.volatility_1y, meta.volatility_3y)
             
             return meta
@@ -260,9 +321,12 @@ class MFAPIService:
             return None
         
         latest = nav_points[0]
-        target_date = latest.nav_date.replace(year=latest.nav_date.year - years)
+        try:
+            target_date = latest.nav_date.replace(year=latest.nav_date.year - years)
+        except ValueError:
+            # Handle Feb 29 edge case
+            target_date = latest.nav_date.replace(year=latest.nav_date.year - years, day=28)
         
-        # Find NAV closest to target date
         closest_nav = None
         min_diff = float('inf')
         
@@ -275,11 +339,9 @@ class MFAPIService:
         if not closest_nav or closest_nav.nav == 0:
             return None
         
-        # Allow up to 90 days difference for the target date
         if min_diff > 90:
             return None
         
-        # Calculate CAGR
         actual_years = (latest.nav_date - closest_nav.nav_date).days / 365.25
         if actual_years <= 0:
             return None
@@ -290,19 +352,19 @@ class MFAPIService:
     @staticmethod
     def _calculate_volatility(nav_points: List[NAVDataPoint], years: int) -> Optional[float]:
         """Calculate annualized volatility (standard deviation of returns)."""
-        if len(nav_points) < 60:  # Need at least ~2 months of daily data
+        if len(nav_points) < 60:
             return None
         
-        # Get daily returns for the period
-        target_date = nav_points[0].nav_date.replace(year=nav_points[0].nav_date.year - years)
+        try:
+            target_date = nav_points[0].nav_date.replace(year=nav_points[0].nav_date.year - years)
+        except ValueError:
+            target_date = nav_points[0].nav_date.replace(year=nav_points[0].nav_date.year - years, day=28)
         
-        # Filter points within the period
         period_points = [p for p in nav_points if p.nav_date >= target_date]
         
         if len(period_points) < 30:
             return None
         
-        # Calculate daily returns
         daily_returns = []
         for i in range(1, len(period_points)):
             if period_points[i-1].nav > 0:
@@ -312,12 +374,10 @@ class MFAPIService:
         if not daily_returns:
             return None
         
-        # Calculate standard deviation
         mean_return = sum(daily_returns) / len(daily_returns)
         variance = sum((r - mean_return) ** 2 for r in daily_returns) / len(daily_returns)
         daily_vol = variance ** 0.5
         
-        # Annualize (252 trading days)
         annual_vol = daily_vol * (252 ** 0.5) * 100
         return round(annual_vol, 2)
     

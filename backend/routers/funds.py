@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
+from datetime import datetime
 import json
 import logging
 
@@ -319,3 +320,132 @@ async def bulk_refresh_funds(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Bulk refresh failed: {str(e)}"
         )
+
+
+# ─── Direct mfapi.in endpoints (no DB required) ──────────────────────────────
+
+@router.get("/mfapi/search")
+async def mfapi_search_funds(
+    q: str = Query(..., min_length=2, description="Search query for mutual funds"),
+    limit: int = Query(20, ge=1, le=50),
+):
+    """
+    Search funds directly from mfapi.in (no database required).
+    Returns real-time fund list with scheme_code and scheme_name.
+    """
+    try:
+        cache_key = f"mfapi:search:{q}:{limit}"
+        cached = await cache_service.get_cached(cache_key)
+        if cached:
+            return json.loads(cached)
+
+        mfapi = MFAPIService()
+        results = await mfapi.search_funds(q, limit=limit)
+        await mfapi.close()
+
+        await cache_service.set_cached(cache_key, json.dumps(results), ttl_seconds=3600)
+        return {"results": results, "total": len(results), "query": q, "source": "mfapi.in"}
+    except Exception as e:
+        logger.error(f"mfapi search failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+
+@router.get("/mfapi/{scheme_code}")
+async def mfapi_get_fund(scheme_code: str):
+    """
+    Get complete fund details directly from mfapi.in (no database required).
+    Returns: scheme_name, amc_name, category, NAV, returns (1Y/3Y/5Y),
+    volatility, Sharpe ratio, riskometer, expense_ratio (estimated), NAV history.
+    """
+    try:
+        cache_key = f"mfapi:fund:{scheme_code}"
+        cached = await cache_service.get_cached(cache_key)
+        if cached:
+            return json.loads(cached)
+
+        mfapi = MFAPIService()
+        meta = await mfapi.get_fund_metadata(scheme_code)
+        await mfapi.close()
+
+        if not meta:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Fund {scheme_code} not found on mfapi.in"
+            )
+
+        # Build response with real data from mfapi.in
+        result = {
+            "scheme_code": meta.scheme_code,
+            "scheme_name": meta.scheme_name,
+            "amc_name": meta.amc_name,
+            "fund_type": meta.fund_type,
+            "category": meta.category,
+            "sub_category": meta.sub_category,
+            "plan_type": meta.plan_type,
+            "option_type": meta.option_type,
+            "isin_growth": meta.isin_growth,
+            "isin_div": meta.isin_div,
+            "nav": meta.latest_nav,
+            "nav_date": str(meta.nav_date) if meta.nav_date else None,
+            "return_1y": meta.return_1y,
+            "return_3y": meta.return_3y,
+            "return_5y": meta.return_5y,
+            "return_since_inception": meta.return_since_inception,
+            "inception_date": str(meta.inception_date) if meta.inception_date else None,
+            "volatility_1y": meta.volatility_1y,
+            "volatility_3y": meta.volatility_3y,
+            "sharpe_1y": meta.sharpe_1y,
+            "sharpe_3y": meta.sharpe_3y,
+            "riskometer": meta.riskometer,
+            "expense_ratio": meta.expense_ratio,
+            "min_sip": meta.min_sip,
+            "min_lumpsum": meta.min_lumpsum,
+            "nav_history_count": len(meta.nav_history),
+            "source": "mfapi.in",
+        }
+
+        await cache_service.set_cached(cache_key, json.dumps(result, default=str), ttl_seconds=86400)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"mfapi fund fetch failed for {scheme_code}: {e}")
+        raise HTTPException(status_code=500, detail=f"Fetch failed: {str(e)}")
+
+
+@router.get("/mfapi/{scheme_code}/nav-history")
+async def mfapi_nav_history(
+    scheme_code: str,
+    days: int = Query(365, ge=1, le=3650, description="Number of days of NAV history"),
+):
+    """
+    Get NAV history for a fund from mfapi.in.
+    Returns list of {date, nav} sorted by date descending.
+    """
+    try:
+        cache_key = f"mfapi:nav:{scheme_code}:{days}"
+        cached = await cache_service.get_cached(cache_key)
+        if cached:
+            return json.loads(cached)
+
+        mfapi = MFAPIService()
+        history = await mfapi.get_fund_nav_history(scheme_code)
+        await mfapi.close()
+
+        from datetime import datetime as dt
+        cutoff = datetime.now() - __import__('datetime').timedelta(days=days)
+
+        filtered = []
+        for entry in history:
+            entry_date = MFAPIService.parse_nav_date(entry.get("date", ""))
+            if entry_date and entry_date >= cutoff.date():
+                filtered.append(entry)
+            if len(filtered) >= days + 30:
+                break
+
+        result = {"scheme_code": scheme_code, "nav_history": filtered, "count": len(filtered), "source": "mfapi.in"}
+        await cache_service.set_cached(cache_key, json.dumps(result, default=str), ttl_seconds=86400)
+        return result
+    except Exception as e:
+        logger.error(f"NAV history fetch failed for {scheme_code}: {e}")
+        raise HTTPException(status_code=500, detail=f"Fetch failed: {str(e)}")
