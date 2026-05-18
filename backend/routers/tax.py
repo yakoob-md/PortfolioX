@@ -16,6 +16,7 @@ router = APIRouter(prefix="/tax", tags=["tax"])
 logger = logging.getLogger(__name__)
 
 @router.post("/upload")
+@router.post("/upload-cams")
 async def upload_cams_pdf(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     try:
         # Validate magic bytes first
@@ -140,3 +141,100 @@ async def calculate_tax_manual(folios: List[Folio], db: AsyncSession = Depends(g
     except Exception as e:
         logger.error(f"Manual tax calculation error: {e}")
         raise HTTPException(status_code=500, detail="Failed to calculate tax for the provided transactions.")
+
+from pydantic import BaseModel
+from typing import Literal, Optional
+from datetime import datetime
+
+class FrontendHolding(BaseModel):
+    id: Optional[str] = None
+    name: str
+    investedAmount: float
+    currentValue: float
+    purchaseDate: str
+    category: Literal['equity', 'debt', 'hybrid']
+
+class TaxCalculateRequest(BaseModel):
+    holdings: List[FrontendHolding]
+    slabRate: float
+    realizedLTCG: float
+
+class TaxCalculateResultItem(BaseModel):
+    name: str
+    category: Literal['equity', 'debt', 'hybrid']
+    investedAmount: float
+    currentValue: float
+    gain: float
+    holdingPeriodDays: int
+    gainType: Literal['STCG', 'LTCG']
+    taxRate: float
+    taxAmount: float
+    netGain: float
+
+class TaxCalculateResponse(BaseModel):
+    holdings: List[TaxCalculateResultItem]
+
+@router.post("/calculate", response_model=TaxCalculateResponse)
+async def calculate_capital_gains_tax(request: TaxCalculateRequest):
+    """
+    Calculate capital gains tax liability in real-time based on FY 2024-25 Budget rules:
+    - Equity/Hybrid: STCG @ 20%, LTCG @ 12.5% (with combined ₹1.25L exemption limit).
+    - Debt: Taxed at individual tax slab.
+    """
+    try:
+        now = datetime.now()
+        remaining_exemption = max(0.0, 125000.0 - request.realizedLTCG)
+        
+        # Sort items descending by potential gain to optimize tax exemption
+        sorted_holdings = sorted(
+            request.holdings,
+            key=lambda x: (x.currentValue - x.investedAmount),
+            reverse=True
+        )
+        
+        results = []
+        for item in sorted_holdings:
+            try:
+                p_date = datetime.strptime(item.purchaseDate, "%Y-%m-%d")
+            except Exception:
+                p_date = datetime(2023, 1, 15)
+                
+            holding_days = (now - p_date).days
+            gain = item.currentValue - item.investedAmount
+            
+            if item.category == 'debt':
+                gain_type = 'STCG' if holding_days < 1095 else 'LTCG'
+                tax_rate = request.slabRate
+                tax_amount = max(0.0, gain * tax_rate)
+            else:
+                # Equity / Hybrid
+                is_long_term = holding_days >= 365
+                if is_long_term:
+                    gain_type = 'LTCG'
+                    tax_rate = 0.125
+                    used_exemption = min(max(0.0, gain), remaining_exemption)
+                    remaining_exemption -= used_exemption
+                    taxable_gain = max(0.0, gain - used_exemption)
+                    tax_amount = taxable_gain * tax_rate
+                else:
+                    gain_type = 'STCG'
+                    tax_rate = 0.20
+                    tax_amount = max(0.0, gain * tax_rate)
+                    
+            results.append(TaxCalculateResultItem(
+                name=item.name,
+                category=item.category,
+                investedAmount=item.investedAmount,
+                currentValue=item.currentValue,
+                gain=gain,
+                holdingPeriodDays=holding_days,
+                gainType=gain_type,
+                taxRate=tax_rate,
+                taxAmount=round(tax_amount, 2),
+                netGain=gain - tax_amount
+            ))
+            
+        return TaxCalculateResponse(holdings=results)
+    except Exception as e:
+        logger.error(f"Tax calculation endpoint error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to calculate tax: {str(e)}")
