@@ -373,7 +373,7 @@ async def mfapi_get_fund(scheme_code: str):
                 detail=f"Fund {scheme_code} not found on mfapi.in"
             )
 
-        # Build response with real data from mfapi.in
+        # Build response with real data from mfapi.in + seed data
         result = {
             "scheme_code": meta.scheme_code,
             "scheme_name": meta.scheme_name,
@@ -398,10 +398,21 @@ async def mfapi_get_fund(scheme_code: str):
             "sharpe_3y": meta.sharpe_3y,
             "riskometer": meta.riskometer,
             "expense_ratio": meta.expense_ratio,
+            "aum_crore": meta.aum_crore,
+            "fund_manager": meta.fund_manager,
+            "portfolio_pe_ratio": meta.portfolio_pe_ratio,
+            "portfolio_pb_ratio": meta.portfolio_pb_ratio,
+            "num_stocks": meta.num_stocks,
+            "top_holdings": meta.top_holdings,
+            "equity_percentage": meta.equity_percentage,
+            "debt_percentage": meta.debt_percentage,
+            "cash_percentage": meta.cash_percentage,
+            "benchmark": meta.benchmark,
+            "exit_load": meta.exit_load,
             "min_sip": meta.min_sip,
             "min_lumpsum": meta.min_lumpsum,
             "nav_history_count": len(meta.nav_history),
-            "source": "mfapi.in",
+            "source": "mfapi.in + seed data",
         }
 
         await cache_service.set_cached(cache_key, json.dumps(result, default=str), ttl_seconds=86400)

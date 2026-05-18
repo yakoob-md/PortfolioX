@@ -25,73 +25,74 @@ async def seed_funds():
     logger.info("Starting hybrid fund seeding (mfapi.in + seed data)...")
     
     mfapi = MFAPIService()
+    count = 0
+    errors = 0
     
-    async with AsyncSessionLocal() as session:
-        count = 0
-        errors = 0
-        
-        for code, seed in FUND_SEED_DATA.items():
-            try:
-                # Fetch real-time data from mfapi.in
-                meta = await mfapi.get_fund_metadata(code)
-                
-                # Use mfapi.in data if available, otherwise fall back to seed data
-                if meta:
-                    scheme_name = meta.scheme_name or seed.get("scheme_name", "")
-                    amc_name = meta.amc_name or seed.get("amc_name", "")
-                    category = meta.category or seed.get("category", "")
-                    sub_category = meta.sub_category or seed.get("sub_category", "")
-                    plan_type = meta.plan_type or seed.get("plan_type", "")
-                    option_type = meta.option_type or seed.get("option_type", "")
-                    nav = meta.latest_nav
-                    nav_date = meta.nav_date
-                    expense_ratio = meta.expense_ratio or seed.get("expense_ratio")
-                    return_1y = meta.return_1y
-                    return_3y = meta.return_3y
-                    return_5y = meta.return_5y
-                    volatility_1y = meta.volatility_1y
-                    volatility_3y = meta.volatility_3y
-                    sharpe_1y = meta.sharpe_1y
-                    sharpe_3y = meta.sharpe_3y
-                    riskometer = meta.riskometer
-                    min_sip = meta.min_sip
-                    min_lumpsum = meta.min_lumpsum
-                    fund_type = meta.fund_type
-                else:
-                    scheme_name = seed.get("scheme_name", "")
-                    amc_name = seed.get("amc_name", "")
-                    category = seed.get("category", "")
-                    sub_category = seed.get("sub_category", "")
-                    plan_type = seed.get("plan_type", "")
-                    option_type = seed.get("option_type", "")
-                    nav = None
-                    nav_date = None
-                    expense_ratio = seed.get("expense_ratio")
-                    return_1y = None
-                    return_3y = None
-                    return_5y = None
-                    volatility_1y = None
-                    volatility_3y = None
-                    sharpe_1y = None
-                    sharpe_3y = None
-                    riskometer = None
-                    min_sip = 500
-                    min_lumpsum = 5000
-                    fund_type = "Open Ended"
-                
-                # Portfolio characteristics from seed data
-                fund_manager = seed.get("fund_manager")
-                portfolio_pe_ratio = seed.get("portfolio_pe_ratio")
-                portfolio_pb_ratio = seed.get("portfolio_pb_ratio")
-                num_stocks = seed.get("num_stocks")
-                top_holdings = seed.get("top_holdings")
-                equity_percentage = seed.get("equity_percentage")
-                debt_percentage = seed.get("debt_percentage")
-                cash_percentage = seed.get("cash_percentage")
-                benchmark = seed.get("benchmark")
-                exit_load = seed.get("exit_load")
-                aum_crore = seed.get("aum_crore")
-                
+    for code, seed in FUND_SEED_DATA.items():
+        try:
+            # Fetch real-time data from mfapi.in
+            meta = await mfapi.get_fund_metadata(code)
+            
+            # Use mfapi.in data if available, otherwise fall back to seed data
+            if meta:
+                scheme_name = meta.scheme_name or seed.get("scheme_name", "")
+                amc_name = meta.amc_name or seed.get("amc_name", "")
+                category = meta.category or seed.get("category", "")
+                sub_category = meta.sub_category or seed.get("sub_category", "")
+                plan_type = meta.plan_type or seed.get("plan_type", "")
+                option_type = meta.option_type or seed.get("option_type", "")
+                nav = meta.latest_nav
+                nav_date = meta.nav_date
+                expense_ratio = meta.expense_ratio or seed.get("expense_ratio")
+                return_1y = meta.return_1y
+                return_3y = meta.return_3y
+                return_5y = meta.return_5y
+                volatility_1y = meta.volatility_1y
+                volatility_3y = meta.volatility_3y
+                sharpe_1y = meta.sharpe_1y
+                sharpe_3y = meta.sharpe_3y
+                riskometer = meta.riskometer
+                min_sip = meta.min_sip
+                min_lumpsum = meta.min_lumpsum
+                fund_type = meta.fund_type
+            else:
+                scheme_name = seed.get("scheme_name", "")
+                amc_name = seed.get("amc_name", "")
+                category = seed.get("category", "")
+                sub_category = seed.get("sub_category", "")
+                plan_type = seed.get("plan_type", "")
+                option_type = seed.get("option_type", "")
+                nav = None
+                nav_date = None
+                expense_ratio = seed.get("expense_ratio")
+                return_1y = None
+                return_3y = None
+                return_5y = None
+                volatility_1y = None
+                volatility_3y = None
+                sharpe_1y = None
+                sharpe_3y = None
+                riskometer = None
+                min_sip = 500
+                min_lumpsum = 5000
+                fund_type = "Open Ended"
+            
+            # Portfolio characteristics from seed data
+            fund_manager = seed.get("fund_manager")
+            portfolio_pe_ratio = seed.get("portfolio_pe_ratio")
+            portfolio_pb_ratio = seed.get("portfolio_pb_ratio")
+            num_stocks = seed.get("num_stocks")
+            top_holdings = seed.get("top_holdings")
+            equity_percentage = seed.get("equity_percentage")
+            debt_percentage = seed.get("debt_percentage")
+            cash_percentage = seed.get("cash_percentage")
+            benchmark = seed.get("benchmark")
+            exit_load = seed.get("exit_load")
+            aum_crore = seed.get("aum_crore")
+            
+            # Use individual transaction per fund to avoid cascading failures
+            async with AsyncSessionLocal() as session:
+                import json
                 stmt = text("""
                     INSERT INTO funds (
                         scheme_code, scheme_name, amc_name, category, sub_category,
@@ -147,7 +148,6 @@ async def seed_funds():
                         updated_at = NOW()
                 """)
                 
-                import json
                 await session.execute(stmt, {
                     "scheme_code": code,
                     "scheme_name": scheme_name,
@@ -182,17 +182,16 @@ async def seed_funds():
                     "benchmark": benchmark,
                     "exit_load": exit_load,
                 })
+                await session.commit()
                 
                 count += 1
                 logger.info(f"  Seeded: {scheme_name} ({code}) - NAV: {nav}, AUM: {aum_crore} Cr")
                 
-            except Exception as e:
-                logger.error(f"Error seeding fund {code}: {e}")
-                errors += 1
-        
-        await session.commit()
-        logger.info(f"Seeding complete: {count} funds added/updated, {errors} errors")
+        except Exception as e:
+            logger.error(f"Error seeding fund {code}: {e}")
+            errors += 1
     
+    logger.info(f"Seeding complete: {count} funds added/updated, {errors} errors")
     await mfapi.close()
 
 
