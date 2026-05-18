@@ -23,14 +23,22 @@ class FundBase(BaseModel):
     sharpe_3y: Optional[float] = None
     riskometer: Optional[str] = None
     fund_type: Optional[str] = None
+    # Portfolio characteristics
+    fund_manager: Optional[str] = None
+    portfolio_pe_ratio: Optional[float] = None
+    portfolio_pb_ratio: Optional[float] = None
+    num_stocks: Optional[int] = None
+    top_holdings: Optional[List[dict]] = None
+    equity_percentage: Optional[float] = None
+    debt_percentage: Optional[float] = None
+    cash_percentage: Optional[float] = None
+    benchmark: Optional[str] = None
+    exit_load: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 class FundDetail(FundBase):
     option_type: Optional[str] = None
-    launch_date: Optional[date] = None
-    min_sip: Optional[int] = None
-    min_lumpsum: Optional[int] = None
     launch_date: Optional[date] = None
     min_sip: Optional[int] = None
     min_lumpsum: Optional[int] = None

@@ -40,6 +40,18 @@ class Fund(Base):
     min_lumpsum: Mapped[Optional[int]] = mapped_column(nullable=True)
     fund_type: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    # Portfolio characteristics (from AMFI disclosures / manual seed)
+    fund_manager: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    portfolio_pe_ratio: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    portfolio_pb_ratio: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
+    num_stocks: Mapped[Optional[int]] = mapped_column(nullable=True)
+    top_holdings: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)  # [{name, weight}, ...]
+    equity_percentage: Mapped[Optional[float]] = mapped_column(Numeric(5, 2), nullable=True)
+    debt_percentage: Mapped[Optional[float]] = mapped_column(Numeric(5, 2), nullable=True)
+    cash_percentage: Mapped[Optional[float]] = mapped_column(Numeric(5, 2), nullable=True)
+    benchmark: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    exit_load: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     holdings: Mapped[List["FundHolding"]] = relationship("FundHolding", back_populates="fund")
 
 class FundHolding(Base):
