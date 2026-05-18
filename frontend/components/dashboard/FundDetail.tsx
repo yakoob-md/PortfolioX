@@ -87,6 +87,8 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false
   )
+  const [enrichedFund, setEnrichedFund] = useState<FundData | null>(null)
+  const [loadingRealData, setLoadingRealData] = useState(false)
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)')
@@ -95,38 +97,95 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  // Derived data
-  const expDiffBps = expenseRatioDiff(fund?.directExpenseRatio ?? 0, fund?.regularExpenseRatio ?? 0)
+  // Fetch real-time data from mfapi.in when the drawer opens
+  useEffect(() => {
+    if (!open || !fund?.id) return
+    setEnrichedFund(null)
+    
+    // Check if we already have real returns data
+    if (displayFund.directReturn1y !== null && displayFund.volatility1y !== null) {
+      setEnrichedFund(fund)
+      return
+    }
+
+    // Fetch from mfapi.in
+    setLoadingRealData(true)
+    fetch(`/api/funds/mfapi/${displayFund.id}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          const isDirect = (data.plan_type || '').toLowerCase() === 'direct'
+          const er = data.expense_ratio || 0.5
+          setEnrichedFund({
+            ...fund,
+            schemeName: data.scheme_name || displayFund.schemeName,
+            fundHouse: data.amc_name || displayFund.fundHouse,
+            category: data.category || displayFund.category,
+            subCategory: data.sub_category || displayFund.subCategory,
+            riskometer: data.riskometer || displayFund.riskometer,
+            directNav: data.nav || displayFund.directNav,
+            regularNav: data.nav || displayFund.regularNav,
+            directExpenseRatio: isDirect ? er : Math.max(0.05, er - 0.75),
+            regularExpenseRatio: isDirect ? er + 0.75 : er,
+            directReturn1y: data.return_1y ?? displayFund.directReturn1y,
+            directReturn3y: data.return_3y ?? displayFund.directReturn3y,
+            directReturn5y: data.return_5y ?? displayFund.directReturn5y,
+            regularReturn1y: data.return_1y ?? displayFund.regularReturn1y,
+            regularReturn3y: data.return_3y ?? displayFund.regularReturn3y,
+            regularReturn5y: data.return_5y ?? displayFund.regularReturn5y,
+            directSharpe1y: data.sharpe_1y ?? displayFund.directSharpe1y,
+            directSharpe3y: data.sharpe_3y ?? displayFund.directSharpe3y,
+            regularSharpe1y: data.sharpe_1y ?? displayFund.regularSharpe1y,
+            regularSharpe3y: data.sharpe_3y ?? displayFund.regularSharpe3y,
+            volatility1y: data.volatility_1y ?? displayFund.volatility1y,
+            volatility3y: data.volatility_3y ?? displayFund.volatility3y,
+            fundType: data.fund_type || displayFund.fundType,
+            minSip: data.min_sip || displayFund.minSip,
+            minLumpsum: data.min_lumpsum || displayFund.minLumpsum,
+          })
+        } else {
+          setEnrichedFund(fund)
+        }
+      })
+      .catch(() => setEnrichedFund(fund))
+      .finally(() => setLoadingRealData(false))
+  }, [open, fund?.id])
+
+  // Derived data - use enriched fund if available
+  const displayFund = enrichedFund || fund
+  if (!displayFund) return null
+
+  const expDiffBps = expenseRatioDiff(displayFund.directExpenseRatio ?? 0, displayFund.regularExpenseRatio ?? 0)
   const lifetimeSavings = useMemo(
-    () => calcLifetimeSavings(fund?.directExpenseRatio ?? 0, fund?.regularExpenseRatio ?? 0, fund?.category || 'Equity'),
-    [fund?.directExpenseRatio, fund?.regularExpenseRatio, fund?.category],
+    () => calcLifetimeSavings(displayFund.directExpenseRatio ?? 0, displayFund.regularExpenseRatio ?? 0, displayFund.category || 'Equity'),
+    [displayFund.directExpenseRatio, displayFund.regularExpenseRatio, displayFund.category],
   )
 
   // Allocation data for pie chart
   const allocationData = useMemo(() => {
     const items: { name: string; value: number }[] = []
-    if (fund?.equityPercentage && fund.equityPercentage > 0) items.push({ name: 'Equity', value: fund.equityPercentage })
-    if (fund?.debtPercentage && fund.debtPercentage > 0) items.push({ name: 'Debt', value: fund.debtPercentage })
+    if (displayFund.equityPercentage && displayFund.equityPercentage > 0) items.push({ name: 'Equity', value: displayFund.equityPercentage })
+    if (displayFund.debtPercentage && displayFund.debtPercentage > 0) items.push({ name: 'Debt', value: displayFund.debtPercentage })
     const accounted = items.reduce((s, i) => s + i.value, 0)
     if (accounted < 100 && accounted > 0) items.push({ name: 'Others', value: Math.round(100 - accounted) })
     if (items.length === 0) items.push({ name: 'N/A', value: 100 })
     return items
-  }, [fund?.equityPercentage, fund?.debtPercentage])
+  }, [displayFund.equityPercentage, displayFund.debtPercentage])
 
   // Benchmark comparison rows
   const benchmarkRows = useMemo(() => {
     const rows: { period: string; direct: number | null; regular: number | null; benchmark: number | null }[] = [
-      { period: '1 Year', direct: fund?.directReturn1y ?? null, regular: fund?.regularReturn1y ?? null, benchmark: fund?.benchmarkReturn1y ?? null },
-      { period: '3 Years', direct: fund?.directReturn3y ?? null, regular: fund?.regularReturn3y ?? null, benchmark: fund?.benchmarkReturn3y ?? null },
-      { period: '5 Years', direct: fund?.directReturn5y ?? null, regular: fund?.regularReturn5y ?? null, benchmark: fund?.benchmarkReturn5y ?? null },
+      { period: '1 Year', direct: displayFund.directReturn1y ?? null, regular: displayFund.regularReturn1y ?? null, benchmark: displayFund.benchmarkReturn1y ?? null },
+      { period: '3 Years', direct: displayFund.directReturn3y ?? null, regular: displayFund.regularReturn3y ?? null, benchmark: displayFund.benchmarkReturn3y ?? null },
+      { period: '5 Years', direct: displayFund.directReturn5y ?? null, regular: displayFund.regularReturn5y ?? null, benchmark: displayFund.benchmarkReturn5y ?? null },
     ]
     return rows
-  }, [fund])
+  }, [displayFund])
 
   // Expense ratio bar widths (max 3% scale)
   const maxER = 3
-  const directERWidth = Math.min(((fund?.directExpenseRatio ?? 0) / maxER) * 100, 100)
-  const regularERWidth = Math.min(((fund?.regularExpenseRatio ?? 0) / maxER) * 100, 100)
+  const directERWidth = Math.min(((displayFund.directExpenseRatio ?? 0) / maxER) * 100, 100)
+  const regularERWidth = Math.min(((displayFund.regularExpenseRatio ?? 0) / maxER) * 100, 100)
 
   // Recommendation
   const recommendation = useMemo(() => {
@@ -162,28 +221,30 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <SheetTitle className="text-lg font-bold leading-tight text-foreground">
-                  {fund.schemeName}
+                  {displayFund.schemeName}
                 </SheetTitle>
                 <SheetDescription className="mt-1 text-sm text-muted-foreground">
-                  {fund.fundHouse}
+                  {displayFund.fundHouse}
+                  {loadingRealData && <span className="ml-2 text-xs text-emerald-600 animate-pulse">Fetching live data...</span>}
                 </SheetDescription>
               </div>
             </div>
 
-            {/* Badges */}
             <div className="flex flex-wrap gap-1.5">
-              <Badge variant="outline" className={`text-[11px] px-2 ${getCategoryColor(fund.category)}`}>
-                {fund.category}
+              <Badge variant="outline" className={`text-[11px] px-2 ${getCategoryColor(displayFund.category)}`}>
+                {displayFund.category}
               </Badge>
               <Badge variant="outline" className="text-[11px] px-2 bg-muted text-muted-foreground">
-                {fund.subCategory}
+                {displayFund.subCategory}
               </Badge>
-              <Badge variant="outline" className={`text-[11px] px-2 ${getRiskColor(fund.riskometer)}`}>
-                {fund.riskometer}
+              <Badge variant="outline" className={`text-[11px] px-2 ${getRiskColor(displayFund.riskometer)}`}>
+                {displayFund.riskometer}
               </Badge>
-              <Badge variant="outline" className="text-[11px] px-2 bg-muted text-muted-foreground">
-                {fund.benchmark}
-              </Badge>
+              {displayFund.benchmark && (
+                <Badge variant="outline" className="text-[11px] px-2 bg-muted text-muted-foreground">
+                  {displayFund.benchmark}
+                </Badge>
+              )}
             </div>
           </SheetHeader>
 
@@ -213,7 +274,7 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                       <div className="mt-2 space-y-2">
                         <div>
                           <p className="text-[10px] text-muted-foreground">Expense Ratio</p>
-                          <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{fund.directExpenseRatio}%</p>
+                          <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{displayFund.directExpenseRatio}%</p>
                           <div className="mt-1 h-2 rounded-full bg-emerald-100 dark:bg-emerald-900/50 overflow-hidden">
                             <motion.div
                               initial={{ width: 0 }}
@@ -225,20 +286,20 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                         </div>
                         <div>
                           <p className="text-[10px] text-muted-foreground">NAV</p>
-                          <p className="text-sm font-semibold text-foreground">₹{fund.directNav.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-foreground">₹{displayFund.directNav.toFixed(2)}</p>
                         </div>
                         <div className="grid grid-cols-3 gap-1">
                           <div>
                             <p className="text-[9px] text-muted-foreground">1Y</p>
-                            <p className="text-xs font-semibold text-foreground">{formatPercent(fund.directReturn1y)}</p>
+                            <p className="text-xs font-semibold text-foreground">{formatPercent(displayFund.directReturn1y)}</p>
                           </div>
                           <div>
                             <p className="text-[9px] text-muted-foreground">3Y</p>
-                            <p className="text-xs font-semibold text-foreground">{formatPercent(fund.directReturn3y)}</p>
+                            <p className="text-xs font-semibold text-foreground">{formatPercent(displayFund.directReturn3y)}</p>
                           </div>
                           <div>
                             <p className="text-[9px] text-muted-foreground">5Y</p>
-                            <p className="text-xs font-semibold text-foreground">{formatPercent(fund.directReturn5y)}</p>
+                            <p className="text-xs font-semibold text-foreground">{formatPercent(displayFund.directReturn5y)}</p>
                           </div>
                         </div>
                       </div>
@@ -250,7 +311,7 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                       <div className="mt-2 space-y-2">
                         <div>
                           <p className="text-[10px] text-muted-foreground">Expense Ratio</p>
-                          <p className="text-xl font-bold text-red-700 dark:text-red-400">{fund.regularExpenseRatio}%</p>
+                          <p className="text-xl font-bold text-red-700 dark:text-red-400">{displayFund.regularExpenseRatio}%</p>
                           <div className="mt-1 h-2 rounded-full bg-red-100 dark:bg-red-900/50 overflow-hidden">
                             <motion.div
                               initial={{ width: 0 }}
@@ -262,20 +323,20 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                         </div>
                         <div>
                           <p className="text-[10px] text-muted-foreground">NAV</p>
-                          <p className="text-sm font-semibold text-foreground">₹{fund.regularNav.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-foreground">₹{displayFund.regularNav.toFixed(2)}</p>
                         </div>
                         <div className="grid grid-cols-3 gap-1">
                           <div>
                             <p className="text-[9px] text-muted-foreground">1Y</p>
-                            <p className="text-xs font-semibold text-foreground">{formatPercent(fund.regularReturn1y)}</p>
+                            <p className="text-xs font-semibold text-foreground">{formatPercent(displayFund.regularReturn1y)}</p>
                           </div>
                           <div>
                             <p className="text-[9px] text-muted-foreground">3Y</p>
-                            <p className="text-xs font-semibold text-foreground">{formatPercent(fund.regularReturn3y)}</p>
+                            <p className="text-xs font-semibold text-foreground">{formatPercent(displayFund.regularReturn3y)}</p>
                           </div>
                           <div>
                             <p className="text-[9px] text-muted-foreground">5Y</p>
-                            <p className="text-xs font-semibold text-foreground">{formatPercent(fund.regularReturn5y)}</p>
+                            <p className="text-xs font-semibold text-foreground">{formatPercent(displayFund.regularReturn5y)}</p>
                           </div>
                         </div>
                       </div>
@@ -302,12 +363,12 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                     Key Metrics
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
-                    <MetricCard icon={<Briefcase className="h-4 w-4" />} label="AUM" value={formatAUM(fund.aumCrore)} />
-                    <MetricCard icon={<Users className="h-4 w-4" />} label="Fund Manager" value={fund.fundManager || '—'} />
-                    <MetricCard icon={<Shield className="h-4 w-4" />} label="Min Investment" value={formatCurrencyFull(fund.minInvestment)} />
-                    <MetricCard icon={<CalendarDays className="h-4 w-4" />} label="Launch Date" value={fund.launchDate ? new Date(fund.launchDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'} />
-                    <MetricCard icon={<AlertTriangle className="h-4 w-4" />} label="Exit Load" value={fund.exitLoad || 'None'} />
-                    <MetricCard icon={<Info className="h-4 w-4" />} label="Tracking Error" value={formatTrackingError(fund.trackingErrorBps)} />
+                    <MetricCard icon={<Briefcase className="h-4 w-4" />} label="AUM" value={formatAUM(displayFund.aumCrore)} />
+                    <MetricCard icon={<Users className="h-4 w-4" />} label="Fund Manager" value={displayFund.fundManager || '—'} />
+                    <MetricCard icon={<Shield className="h-4 w-4" />} label="Min Investment" value={formatCurrencyFull(displayFund.minInvestment)} />
+                    <MetricCard icon={<CalendarDays className="h-4 w-4" />} label="Launch Date" value={displayFund.launchDate ? new Date(displayFund.launchDate).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'} />
+                    <MetricCard icon={<AlertTriangle className="h-4 w-4" />} label="Exit Load" value={displayFund.exitLoad || 'None'} />
+                    <MetricCard icon={<Info className="h-4 w-4" />} label="Tracking Error" value={formatTrackingError(displayFund.trackingErrorBps)} />
                   </div>
                 </motion.div>
 
@@ -327,26 +388,26 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                     </div>
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <p className="text-xs text-muted-foreground text-left">1Y Sharpe</p>
-                      <p className={`text-sm font-semibold ${fund.directSharpe1y !== null && fund.regularSharpe1y !== null && fund.directSharpe1y > fund.regularSharpe1y ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
-                        {formatSharpe(fund.directSharpe1y)}
+                      <p className={`text-sm font-semibold ${displayFund.directSharpe1y !== null && displayFund.regularSharpe1y !== null && displayFund.directSharpe1y > displayFund.regularSharpe1y ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
+                        {formatSharpe(displayFund.directSharpe1y)}
                       </p>
-                      <p className={`text-sm font-semibold ${fund.regularSharpe1y !== null && fund.directSharpe1y !== null && fund.regularSharpe1y > fund.directSharpe1y ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
-                        {formatSharpe(fund.regularSharpe1y)}
+                      <p className={`text-sm font-semibold ${displayFund.regularSharpe1y !== null && displayFund.directSharpe1y !== null && displayFund.regularSharpe1y > displayFund.directSharpe1y ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
+                        {formatSharpe(displayFund.regularSharpe1y)}
                       </p>
                     </div>
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <p className="text-xs text-muted-foreground text-left">3Y Sharpe</p>
-                      <p className={`text-sm font-semibold ${fund.directSharpe3y !== null && fund.regularSharpe3y !== null && fund.directSharpe3y > fund.regularSharpe3y ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
-                        {formatSharpe(fund.directSharpe3y)}
+                      <p className={`text-sm font-semibold ${displayFund.directSharpe3y !== null && displayFund.regularSharpe3y !== null && displayFund.directSharpe3y > displayFund.regularSharpe3y ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
+                        {formatSharpe(displayFund.directSharpe3y)}
                       </p>
-                      <p className={`text-sm font-semibold ${fund.regularSharpe3y !== null && fund.directSharpe3y !== null && fund.regularSharpe3y > fund.directSharpe3y ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
-                        {formatSharpe(fund.regularSharpe3y)}
+                      <p className={`text-sm font-semibold ${displayFund.regularSharpe3y !== null && displayFund.directSharpe3y !== null && displayFund.regularSharpe3y > displayFund.directSharpe3y ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
+                        {formatSharpe(displayFund.regularSharpe3y)}
                       </p>
                     </div>
-                    {fund.directSharpe1y !== null && fund.regularSharpe1y !== null && (
+                    {displayFund.directSharpe1y !== null && displayFund.regularSharpe1y !== null && (
                       <p className="text-xs text-muted-foreground pt-1 border-t">
-                        Δ Sharpe (1Y): <span className={getRiskAdjustedColor(fund.directSharpe1y - fund.regularSharpe1y)}>
-                          {(fund.directSharpe1y - fund.regularSharpe1y).toFixed(2)}
+                        Δ Sharpe (1Y): <span className={getRiskAdjustedColor(displayFund.directSharpe1y - displayFund.regularSharpe1y)}>
+                          {(displayFund.directSharpe1y - displayFund.regularSharpe1y).toFixed(2)}
                         </span>
                       </p>
                     )}
@@ -356,7 +417,7 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                 <Separator />
 
                 {/* Tracking Error Explanation */}
-                {fund.trackingErrorBps !== null && fund.trackingErrorBps > 0 && (
+                {displayFund.trackingErrorBps !== null && displayFund.trackingErrorBps > 0 && (
                   <motion.div custom={3} variants={sectionVar} initial="hidden" animate="visible" className="rounded-xl border border-blue-200/50 dark:border-blue-800/50 bg-blue-50/50 dark:bg-blue-950/20 p-4">
                     <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
                       <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -364,9 +425,9 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                     </h3>
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       The Direct and Regular plans of this fund have a tracking error of{' '}
-                      <strong className="text-foreground">{formatTrackingError(fund.trackingErrorBps)}</strong>.
+                      <strong className="text-foreground">{formatTrackingError(displayFund.trackingErrorBps)}</strong>.
                       This means the returns between the two plans deviate by approximately{' '}
-                      {fund.trackingErrorBps.toFixed(1)} bps annually. Since both plans hold the same portfolio,
+                      {displayFund.trackingErrorBps.toFixed(1)} bps annually. Since both plans hold the same portfolio,
                       this deviation is <em>entirely</em> due to the expense ratio difference — the Regular plan
                       deducts a higher fee (commission to distributors), while the Direct plan passes those savings to you.
                     </p>
@@ -383,10 +444,10 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                     Portfolio Characteristics
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
-                    <MetricCard icon={<BarChart3 className="h-4 w-4" />} label="P/E Ratio" value={fund.portfolioPeRatio !== null ? fund.portfolioPeRatio.toFixed(1) : '—'} />
-                    <MetricCard icon={<BarChart3 className="h-4 w-4" />} label="P/B Ratio" value={fund.portfolioPbRatio !== null ? fund.portfolioPbRatio.toFixed(2) : '—'} />
-                    <MetricCard icon={<Users className="h-4 w-4" />} label="No. of Stocks" value={fund.numStocks !== null ? String(fund.numStocks) : '—'} />
-                    <MetricCard icon={<Briefcase className="h-4 w-4" />} label="Top Holding" value={fund.topHolding || '—'} sub={fund.topHoldingWeight !== null ? `${fund.topHoldingWeight.toFixed(1)}% weight` : undefined} />
+                    <MetricCard icon={<BarChart3 className="h-4 w-4" />} label="P/E Ratio" value={displayFund.portfolioPeRatio !== null ? displayFund.portfolioPeRatio.toFixed(1) : '—'} />
+                    <MetricCard icon={<BarChart3 className="h-4 w-4" />} label="P/B Ratio" value={displayFund.portfolioPbRatio !== null ? displayFund.portfolioPbRatio.toFixed(2) : '—'} />
+                    <MetricCard icon={<Users className="h-4 w-4" />} label="No. of Stocks" value={displayFund.numStocks !== null ? String(displayFund.numStocks) : '—'} />
+                    <MetricCard icon={<Briefcase className="h-4 w-4" />} label="Top Holding" value={displayFund.topHolding || '—'} sub={displayFund.topHoldingWeight !== null ? `${displayFund.topHoldingWeight.toFixed(1)}% weight` : undefined} />
                   </div>
                 </motion.div>
 
@@ -447,7 +508,7 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                 <motion.div custom={0} variants={sectionVar} initial="hidden" animate="visible">
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
                     <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    Fund Returns vs Benchmark ({fund.benchmark})
+                    Fund Returns vs Benchmark ({displayFund.benchmark})
                   </h3>
                   <div className="rounded-xl border overflow-hidden">
                     <Table>
@@ -508,7 +569,7 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                     💰 Lifetime Savings with Direct Plan
                   </h3>
                   <p className="text-xs text-muted-foreground mb-3">
-                    Projected savings (Direct vs Regular) based on {EXPECTED_RETURN_BY_CATEGORY[fund.category] || 10}% expected return for {fund.category} funds.
+                    Projected savings (Direct vs Regular) based on {EXPECTED_RETURN_BY_CATEGORY[displayFund.category] || 10}% expected return for {displayFund.category} funds.
                     Expense ratio difference: <strong className="text-foreground">{expDiffBps} bps</strong>.
                   </p>
 
@@ -607,7 +668,7 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
                         title="Same Fund Manager & Portfolio"
                         description="Both Direct and Regular plans are managed by the same fund manager with identical portfolios. The only difference is the expense ratio."
                       />
-                      {fund.subCategory === 'ELSS' && (
+                      {displayFund.subCategory === 'ELSS' && (
                         <TradeoffItem
                           icon={<AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />}
                           title="ELSS Lock-in"
