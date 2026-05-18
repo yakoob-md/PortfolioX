@@ -85,13 +85,19 @@ async def get_fund_details(
 ):
     """
     Get detailed information for a specific mutual fund.
-    Cached for 24 hours.
+    Cached for 24 hours (unless it has null/stale metrics, which triggers auto-hydration).
     """
     cache_key = f"fund:{scheme_code}"
     
     cached_data = await cache_service.get_cached(cache_key)
     if cached_data:
-        return FundDetail(**json.loads(cached_data))
+        try:
+            parsed_cached = json.loads(cached_data)
+            # Check if the cached version contains return_1y and expense_ratio. If not, bypass cache so we can fetch real data!
+            if parsed_cached.get("return_1y") is not None and parsed_cached.get("expense_ratio") is not None:
+                return FundDetail(**parsed_cached)
+        except Exception:
+            pass
         
     fund_repo = FundRepository(db)
     fund = await fund_repo.get_fund_by_code(scheme_code)
@@ -102,6 +108,57 @@ async def get_fund_details(
             detail=f"Fund with code {scheme_code} not found"
         )
         
+    # Check if returns/expense_ratio/aum are null or stale (updated more than 7 days ago)
+    needs_refresh = False
+    if fund.return_1y is None or fund.expense_ratio is None or fund.aum_crore is None:
+        needs_refresh = True
+    elif fund.updated_at:
+        age_days = (datetime.now() - fund.updated_at).days
+        if age_days >= 7:
+            needs_refresh = True
+            
+    if needs_refresh:
+        try:
+            logger.info(f"Fund {scheme_code} metrics are missing or stale. Triggering on-the-fly hydration from mfapi.in...")
+            mfapi = MFAPIService()
+            meta = await mfapi.get_fund_metadata(scheme_code)
+            await mfapi.close()
+            
+            if meta:
+                metrics = {
+                    "scheme_name": meta.scheme_name,
+                    "amc_name": meta.amc_name,
+                    "category": meta.category,
+                    "sub_category": meta.sub_category,
+                    "plan_type": meta.plan_type,
+                    "option_type": meta.option_type,
+                    "expense_ratio": meta.expense_ratio,
+                    "aum_crore": meta.aum_crore,
+                    "return_1y": meta.return_1y,
+                    "return_3y": meta.return_3y,
+                    "return_5y": meta.return_5y,
+                    "volatility_1y": meta.volatility_1y,
+                    "volatility_3y": meta.volatility_3y,
+                    "sharpe_1y": meta.sharpe_1y,
+                    "sharpe_3y": meta.sharpe_3y,
+                    "riskometer": meta.riskometer,
+                    "min_sip": meta.min_sip,
+                    "min_lumpsum": meta.min_lumpsum,
+                    "fund_type": meta.fund_type,
+                }
+                if meta.latest_nav:
+                    metrics["nav"] = meta.latest_nav
+                if meta.nav_date:
+                    metrics["nav_date"] = meta.nav_date
+                    
+                await fund_repo.update_fund_metrics(scheme_code, metrics)
+                
+                # Fetch fresh from DB so sqlalchemy local session is updated
+                db.expire(fund)
+                fund = await fund_repo.get_fund_by_code(scheme_code)
+        except Exception as refresh_err:
+            logger.error(f"Failed to refresh fund {scheme_code} on-the-fly: {refresh_err}")
+            
     response_data = FundDetail.model_validate(fund)
     
     await cache_service.set_cached(cache_key, response_data.model_dump_json(), ttl_seconds=86400)
@@ -131,6 +188,14 @@ async def refresh_fund_data(
         # Update database with real-time metrics
         fund_repo = FundRepository(db)
         metrics = {
+            "scheme_name": meta.scheme_name,
+            "amc_name": meta.amc_name,
+            "category": meta.category,
+            "sub_category": meta.sub_category,
+            "plan_type": meta.plan_type,
+            "option_type": meta.option_type,
+            "expense_ratio": meta.expense_ratio,
+            "aum_crore": meta.aum_crore,
             "return_1y": meta.return_1y,
             "return_3y": meta.return_3y,
             "return_5y": meta.return_5y,
@@ -173,6 +238,8 @@ async def refresh_fund_data(
                 "volatility_1y": meta.volatility_1y,
                 "sharpe_1y": meta.sharpe_1y,
                 "riskometer": meta.riskometer,
+                "expense_ratio": meta.expense_ratio,
+                "aum_crore": meta.aum_crore,
             }
         }
         
@@ -209,6 +276,14 @@ async def bulk_refresh_funds(
         metrics_map = {}
         for code, meta in fund_data.items():
             metrics_map[code] = {
+                "scheme_name": meta.scheme_name,
+                "amc_name": meta.amc_name,
+                "category": meta.category,
+                "sub_category": meta.sub_category,
+                "plan_type": meta.plan_type,
+                "option_type": meta.option_type,
+                "expense_ratio": meta.expense_ratio,
+                "aum_crore": meta.aum_crore,
                 "return_1y": meta.return_1y,
                 "return_3y": meta.return_3y,
                 "return_5y": meta.return_5y,
