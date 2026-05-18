@@ -112,7 +112,8 @@ async def analyze_portfolio(
             if fund.return_1y is None or fund.expense_ratio is None or fund.aum_crore is None:
                 needs_refresh = True
             elif fund.updated_at:
-                age_days = (datetime.now() - fund.updated_at).days
+                updated_at_naive = fund.updated_at.replace(tzinfo=None) if fund.updated_at.tzinfo else fund.updated_at
+                age_days = (datetime.utcnow() - updated_at_naive).days
                 if age_days >= 7:
                     needs_refresh = True
                     
