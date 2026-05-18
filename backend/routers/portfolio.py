@@ -159,10 +159,13 @@ async def analyze_portfolio(
 
             holdings_db = await fund_repo.get_fund_holdings([code])
             
-            # Smart Fallback: If no holdings in DB, use category-based mock for visual continuity
+            # If no holdings in DB, dynamically generate and seed them!
+            if not holdings_db and fund:
+                from services.holdings_generator import generate_and_seed_fund_holdings
+                await generate_and_seed_fund_holdings(db, code, fund.category, fund.sub_category)
+                holdings_db = await fund_repo.get_fund_holdings([code])
+                
             if not holdings_db:
-                # We generate 1 dummy holding for the sector breakdown so it's not empty
-                # In a real pro app, we'd pull category averages here.
                 fund_holdings[code] = [
                     Holding(stock_name="Diversified Equity", holding_percentage=100.0, sector="Diversified", market_cap="Large", asset_type="Equity")
                 ]
