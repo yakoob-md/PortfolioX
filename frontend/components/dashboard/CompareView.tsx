@@ -484,6 +484,7 @@ function getDimensionValue(comp: ComparisonData, dim: string): number | null {
 
 // ─── Exposure Tradeoff Card ───────────────────────────────────────────────
 function ExposureTradeoffCard({ comparison, colorIndex }: { comparison: ComparisonData; colorIndex: number }) {
+  if (!comparison) return null
   const equityPct = comparison.equityPercentage ?? 0
   const debtPct = comparison.debtPercentage ?? 0
   const otherPct = Math.max(0, 100 - equityPct - debtPct)
@@ -640,6 +641,16 @@ function ExposureTradeoffCard({ comparison, colorIndex }: { comparison: Comparis
 
 // ─── Fund Comparison Card (existing, unchanged) ───────────────────────────
 function FundComparisonCard({ comparison }: { comparison: ComparisonData }) {
+  if (!comparison?.direct || !comparison?.regular) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-8 text-center">
+          <p className="text-sm text-muted-foreground">Data unavailable for this fund.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   const insight = useFundStore(s => s.aiInsights[comparison.fundId])
   const insightLoading = useFundStore(s => s.aiInsightsLoading[comparison.fundId])
 
