@@ -40,13 +40,14 @@ export default function CompareView() {
   // Fetch AI insights for comparisons
   useEffect(() => {
     comparisons?.forEach(comp => {
+      if (!comp?.fundId || !comp?.direct) return
       if (!aiInsights?.[comp.fundId] && !aiInsightsLoading?.[comp.fundId]) {
         fetchAiInsight(comp.fundId, {
           fundName: comp.schemeName,
           directExpenseRatio: comp.direct.expenseRatio,
-          regularExpenseRatio: comp.regular.expenseRatio,
+          regularExpenseRatio: comp.regular?.expenseRatio,
           directReturn1y: comp.direct.return1y,
-          regularReturn1y: comp.regular.return1y,
+          regularReturn1y: comp.regular?.return1y,
           expenseDiff: comp.expenseDiff,
           category: comp.category,
           subCategory: comp.subCategory,
@@ -67,17 +68,21 @@ export default function CompareView() {
     // Find min/max for each dimension to normalize
     const ranges: Record<string, { min: number; max: number }> = {}
     for (const dim of dimensions) {
-      const vals = comparisons?.map(c => getDimensionValue(c, dim)).filter(v => v !== null) as number[] || []
-      ranges[dim] = {
-        min: Math.min(...vals),
-        max: Math.max(...vals),
+      const vals = comparisons.map(c => getDimensionValue(c, dim)).filter((v): v is number => v !== null)
+      if (vals.length === 0) {
+        ranges[dim] = { min: 0, max: 1 }
+      } else {
+        ranges[dim] = {
+          min: Math.min(...vals),
+          max: Math.max(...vals),
+        }
       }
     }
 
     // For expense ratio, lower is better → invert the normalization
     return dimensions.map(dim => {
       const entry: Record<string, string | number> = { dimension: dim }
-      comparisons?.forEach((comp, i) => {
+      comparisons.forEach((comp, i) => {
         const raw = getDimensionValue(comp, dim)
         const { min, max } = ranges[dim]
         const range = max - min || 1
@@ -99,9 +104,9 @@ export default function CompareView() {
     if (!comparisons || comparisons.length === 0) return []
     return comparisons.map(comp => ({
       name: comp.schemeName.length > 25 ? comp.schemeName.slice(0, 25) + '…' : comp.schemeName,
-      'Direct Return': comp.direct.return1y ?? 0,
-      'Regular Return': comp.regular.return1y ?? 0,
-      'Savings (bps)': comp.expenseDiff,
+      'Direct Return': comp.direct?.return1y ?? 0,
+      'Regular Return': comp.regular?.return1y ?? 0,
+      'Savings (bps)': comp.expenseDiff ?? 0,
     }))
   }, [comparisons])
 
@@ -465,12 +470,13 @@ export default function CompareView() {
 
 // ─── Helper: extract dimension value from comparison ──────────────────────────
 function getDimensionValue(comp: ComparisonData, dim: string): number | null {
+  if (!comp?.direct) return null
   switch (dim) {
-    case 'Expense Ratio': return comp.direct.expenseRatio
-    case '1Y Return': return comp.direct.return1y
-    case '3Y Return': return comp.direct.return3y
-    case '5Y Return': return comp.direct.return5y
-    case 'Sharpe Ratio': return comp.direct.sharpe1y ?? null
+    case 'Expense Ratio': return comp.direct?.expenseRatio ?? null
+    case '1Y Return': return comp.direct?.return1y ?? null
+    case '3Y Return': return comp.direct?.return3y ?? null
+    case '5Y Return': return comp.direct?.return5y ?? null
+    case 'Sharpe Ratio': return comp.direct?.sharpe1y ?? null
     case 'AUM': return comp.aumCrore ?? null
     default: return null
   }
