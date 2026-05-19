@@ -90,6 +90,9 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
   const [enrichedFund, setEnrichedFund] = useState<FundData | null>(null)
   const [loadingRealData, setLoadingRealData] = useState(false)
 
+  // Derived data - use enriched fund if available (must be before useEffects that reference it)
+  const displayFund = enrichedFund || fund
+
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)')
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
@@ -103,14 +106,14 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
     setEnrichedFund(null)
     
     // Check if we already have real returns data
-    if (displayFund.directReturn1y !== null && displayFund.volatility1y !== null) {
+    if (fund.directReturn1y !== null && fund.volatility1y !== null) {
       setEnrichedFund(fund)
       return
     }
 
     // Fetch from mfapi.in
     setLoadingRealData(true)
-    fetch(`/api/funds/mfapi/${displayFund.id}`)
+    fetch(`/api/funds/mfapi/${fund.id}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data) {
@@ -118,30 +121,30 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
           const er = data.expense_ratio || 0.5
           setEnrichedFund({
             ...fund,
-            schemeName: data.scheme_name || displayFund.schemeName,
-            fundHouse: data.amc_name || displayFund.fundHouse,
-            category: data.category || displayFund.category,
-            subCategory: data.sub_category || displayFund.subCategory,
-            riskometer: data.riskometer || displayFund.riskometer,
-            directNav: data.nav || displayFund.directNav,
-            regularNav: data.nav || displayFund.regularNav,
+            schemeName: data.scheme_name || fund.schemeName,
+            fundHouse: data.amc_name || fund.fundHouse,
+            category: data.category || fund.category,
+            subCategory: data.sub_category || fund.subCategory,
+            riskometer: data.riskometer || fund.riskometer,
+            directNav: data.nav || fund.directNav,
+            regularNav: data.nav || fund.regularNav,
             directExpenseRatio: isDirect ? er : Math.max(0.05, er - 0.75),
             regularExpenseRatio: isDirect ? er + 0.75 : er,
-            directReturn1y: data.return_1y ?? displayFund.directReturn1y,
-            directReturn3y: data.return_3y ?? displayFund.directReturn3y,
-            directReturn5y: data.return_5y ?? displayFund.directReturn5y,
-            regularReturn1y: data.return_1y ?? displayFund.regularReturn1y,
-            regularReturn3y: data.return_3y ?? displayFund.regularReturn3y,
-            regularReturn5y: data.return_5y ?? displayFund.regularReturn5y,
-            directSharpe1y: data.sharpe_1y ?? displayFund.directSharpe1y,
-            directSharpe3y: data.sharpe_3y ?? displayFund.directSharpe3y,
-            regularSharpe1y: data.sharpe_1y ?? displayFund.regularSharpe1y,
-            regularSharpe3y: data.sharpe_3y ?? displayFund.regularSharpe3y,
-            volatility1y: data.volatility_1y ?? displayFund.volatility1y,
-            volatility3y: data.volatility_3y ?? displayFund.volatility3y,
-            fundType: data.fund_type || displayFund.fundType,
-            minSip: data.min_sip || displayFund.minSip,
-            minLumpsum: data.min_lumpsum || displayFund.minLumpsum,
+            directReturn1y: data.return_1y ?? fund.directReturn1y,
+            directReturn3y: data.return_3y ?? fund.directReturn3y,
+            directReturn5y: data.return_5y ?? fund.directReturn5y,
+            regularReturn1y: data.return_1y ?? fund.regularReturn1y,
+            regularReturn3y: data.return_3y ?? fund.regularReturn3y,
+            regularReturn5y: data.return_5y ?? fund.regularReturn5y,
+            directSharpe1y: data.sharpe_1y ?? fund.directSharpe1y,
+            directSharpe3y: data.sharpe_3y ?? fund.directSharpe3y,
+            regularSharpe1y: data.sharpe_1y ?? fund.regularSharpe1y,
+            regularSharpe3y: data.sharpe_3y ?? fund.regularSharpe3y,
+            volatility1y: data.volatility_1y ?? fund.volatility1y,
+            volatility3y: data.volatility_3y ?? fund.volatility3y,
+            fundType: data.fund_type || fund.fundType,
+            minSip: data.min_sip || fund.minSip,
+            minLumpsum: data.min_lumpsum || fund.minLumpsum,
           })
         } else {
           setEnrichedFund(fund)
@@ -151,8 +154,6 @@ export default function FundDetail({ fund, open, onOpenChange }: FundDetailProps
       .finally(() => setLoadingRealData(false))
   }, [open, fund?.id])
 
-  // Derived data - use enriched fund if available
-  const displayFund = enrichedFund || fund
   if (!displayFund) return null
 
   const expDiffBps = expenseRatioDiff(displayFund.directExpenseRatio ?? 0, displayFund.regularExpenseRatio ?? 0)

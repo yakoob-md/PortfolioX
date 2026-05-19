@@ -29,15 +29,25 @@ const METRIC_EXPLANATIONS: Record<string, { title: string; desc: string; icon: R
     desc: 'The yearly charge the fund house deducts from your investment. Lower = more money stays with you.',
     icon: Percent,
   },
+  '1Y Return': {
+    title: '1 Year Return',
+    desc: 'How much the fund grew (or shrank) over the past year. Higher is better.',
+    icon: TrendingUp,
+  },
+  '3Y Return': {
+    title: '3 Year Return',
+    desc: 'Annualized return over the past 3 years. Shows medium-term performance.',
+    icon: TrendingUp,
+  },
+  'Sharpe Ratio': {
+    title: 'Risk-Adjusted Return',
+    desc: 'Return per unit of risk taken. Higher means better returns for the risk you\'re taking.',
+    icon: Gauge,
+  },
   'AUM': {
     title: 'Fund Size',
     desc: 'Total money invested in this fund by all investors. Larger funds are generally more stable.',
     icon: Building2,
-  },
-  'NAV': {
-    title: 'Current Price',
-    desc: 'The price of one unit of this fund today. Like a stock price, it changes daily.',
-    icon: IndianRupee,
   },
 }
 
@@ -84,19 +94,21 @@ export default function CompareView() {
     // Only use dimensions where at least one fund has non-null data
     const allDimensions = [
       { key: 'Expense Ratio', label: 'Lower Fees', invert: true },
+      { key: '1Y Return', label: '1Y Return', invert: false },
+      { key: '3Y Return', label: '3Y Return', invert: false },
+      { key: 'Sharpe Ratio', label: 'Risk-Adjusted', invert: false },
       { key: 'AUM', label: 'Fund Size', invert: false },
-      { key: 'NAV', label: 'Unit Price', invert: false },
     ]
 
     const dimensions = allDimensions.filter(d =>
-      comparisons.some(c => getDimensionValue(c, d.key) !== null && getDimensionValue(c, d.key)! > 0)
+      comparisons.some(c => getDimensionValue(c, d.key) !== null)
     )
 
     if (dimensions.length < 2) return null
 
     const ranges: Record<string, { min: number; max: number }> = {}
     for (const dim of dimensions) {
-      const vals = comparisons.map(c => getDimensionValue(c, dim.key)).filter((v): v is number => v !== null && v > 0)
+      const vals = comparisons.map(c => getDimensionValue(c, dim.key)).filter((v): v is number => v !== null)
       ranges[dim.key] = vals.length > 0
         ? { min: Math.min(...vals), max: Math.max(...vals) }
         : { min: 0, max: 1 }
